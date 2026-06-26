@@ -1,0 +1,19 @@
+{
+  "name": "tarot-de-marsella-libre",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lectura simbólica gratuita inspirada en la tarología de Alejandro Jodorowsky y en el Tarot de Marsella.",
+  "type": "module",
+  "scripts": {
+    "start": "npx serve .",
+    "qa:ethical": "node scripts/qa-ethical.mjs",
+    "worker:deploy": "wrangler deploy",
+    "worker:secret:gemini": "wrangler secret put GEMINI_API_KEY"
+  },
+  "keywords": [
+    "tarot",
+    "marsella",
+    "lectura-simbolica"
+  ],
+  "license": "UNLICENSED"
+}

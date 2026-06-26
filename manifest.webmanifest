@@ -1,0 +1,21 @@
+{
+  "name": "Tarot de Marsella Libre",
+  "short_name": "Tarot Libre",
+  "description": "Lectura simbólica gratuita inspirada en la tarología de Alejandro Jodorowsky y en el Tarot de Marsella. No cobra, no predice y no guarda tus datos.",
+  "lang": "es",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#101116",
+  "theme_color": "#101116",
+  "categories": ["education", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

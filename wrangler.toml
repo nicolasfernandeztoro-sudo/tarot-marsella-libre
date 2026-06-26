@@ -1,0 +1,10 @@
+name = "tarot-ia"
+main = "worker/index.js"
+compatibility_date = "2026-06-20"
+
+[vars]
+GEMINI_MODEL = "gemini-2.5-flash"
+CLOUDFLARE_AI_MODEL = "@cf/meta/llama-3.2-3b-instruct"
+
+[ai]
+binding = "AI"

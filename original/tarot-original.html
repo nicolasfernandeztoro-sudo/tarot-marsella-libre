@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tarot de Marsella · según Jodorowsky</title>
+<style>
+  :root{
+    --bg:#0e0a1a; --bg2:#171029; --gold:#d9b46a; --gold2:#f2dca0;
+    --ink:#ede6d8; --muted:#a99fc0; --line:#3a2f55;
+    --azul:#274a8c; --rojo:#a3262b; --amarillo:#e0b840; --carne:#d99a78;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:Georgia,"Times New Roman",serif;
+    background:radial-gradient(circle at 50% -10%, #20163b 0%, var(--bg) 60%);
+    color:var(--ink); min-height:100vh; line-height:1.6; padding:40px 20px 80px;
+  }
+  .wrap{max-width:760px;margin:0 auto}
+  header{text-align:center;margin-bottom:28px}
+  h1{font-size:2rem;color:var(--gold2);letter-spacing:1px;font-weight:normal}
+  .sub{color:var(--muted);font-style:italic;font-size:.95rem;margin-top:6px}
+  .stars{color:var(--gold);letter-spacing:8px;margin:14px 0 0;opacity:.6}
+
+  .ask{max-width:560px;margin:0 auto 26px;display:flex;flex-direction:column;gap:14px}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .row > div{flex:1;min-width:160px}
+  label{color:var(--gold2);font-size:.9rem;letter-spacing:.5px;display:block;margin-bottom:5px}
+  input,textarea{
+    width:100%;font-family:inherit;font-size:1rem;background:rgba(23,16,41,.7);
+    color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:11px 14px;
+  }
+  textarea{min-height:62px;resize:vertical}
+  input:focus,textarea:focus{outline:none;border-color:var(--gold)}
+  .themes{display:flex;flex-wrap:wrap;gap:8px}
+  .theme{font-family:Arial,sans-serif;font-size:.85rem;cursor:pointer;
+    background:rgba(23,16,41,.7);border:1px solid var(--line);color:var(--muted);
+    padding:7px 15px;border-radius:20px;transition:.2s}
+  .theme:hover{border-color:var(--gold);color:var(--gold2)}
+  .theme.active{background:#2a2048;border-color:var(--gold);color:var(--gold2)}
+
+  .stage{display:flex;flex-direction:column;align-items:center;gap:24px}
+  .card{
+    width:230px;height:384px;border-radius:14px;position:relative;overflow:hidden;
+    background:linear-gradient(180deg,#fbf4e3,#f0e4c8);border:3px solid var(--gold);
+    box-shadow:0 18px 50px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.2) inset;
+    padding:14px;display:flex;flex-direction:column;color:#241a10;transition:transform .6s;
+  }
+  .card .num{text-align:center;font-size:1.05rem;letter-spacing:2px;color:#7a5a1e;z-index:2}
+  .card .glyph{flex:1;display:flex;align-items:center;justify-content:center;
+    font-size:5.2rem;line-height:1;margin:6px 0;z-index:2;filter:drop-shadow(0 3px 4px rgba(0,0,0,.25))}
+  .card .name{text-align:center;font-size:1.1rem;text-transform:uppercase;letter-spacing:1px;
+    padding-top:8px;border-top:2px solid #cdab5c;color:#3a2a10;min-height:2.6em;
+    display:flex;align-items:center;justify-content:center;z-index:2}
+  .card .frame{position:absolute;inset:7px;border:1px solid #cdab5c;border-radius:8px;pointer-events:none;z-index:3}
+  .card .card-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
+  .back{background:repeating-linear-gradient(45deg,#241a3f 0 12px,#2d2350 12px 24px);
+    color:var(--gold2);align-items:center;justify-content:center;text-align:center}
+  .back .deco{font-size:3.4rem;opacity:.85}
+  .back small{color:var(--gold);letter-spacing:3px;margin-top:10px;display:block;font-size:.7rem}
+
+  button.draw{font-family:inherit;cursor:pointer;border:1px solid var(--gold);
+    background:linear-gradient(180deg,#2c2150,#1d1638);color:var(--gold2);
+    padding:13px 30px;border-radius:30px;font-size:1rem;letter-spacing:1px;
+    transition:.25s;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+  button.draw:hover{background:linear-gradient(180deg,#3a2c68,#251c45);transform:translateY(-2px)}
+
+  .reading{max-width:640px;width:100%;background:rgba(23,16,41,.7);
+    border:1px solid var(--line);border-radius:16px;padding:24px 26px;
+    opacity:0;transform:translateY(14px);transition:.5s}
+  .reading.show{opacity:1;transform:none}
+  .reading .roman{color:var(--gold);font-size:.9rem;letter-spacing:2px}
+  .reading h2{color:var(--gold2);font-weight:normal;font-size:1.5rem;margin-bottom:2px}
+  .reading .phrase{font-style:italic;color:var(--muted);margin:10px 0 14px;font-size:1.05rem}
+  .reading > p{margin-bottom:14px}
+  .answer{background:#201840;border:1px solid var(--gold);border-radius:12px;padding:18px 20px;margin:18px 0 14px}
+  .answer .tag{color:var(--gold);font-family:Arial,sans-serif;font-size:.78rem;
+    text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:8px}
+  .answer .q{color:var(--muted);font-style:italic;margin-bottom:10px}
+  .answer p{margin:0 0 10px;color:var(--ink)}
+  .answer p:last-child{margin-bottom:0}
+  .answer b{color:var(--gold2);font-weight:normal}
+  .perfil{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
+  .perfil span{background:#171029;border:1px solid var(--line);color:var(--muted);
+    padding:5px 12px;border-radius:8px;font-size:.8rem;font-family:Arial,sans-serif}
+  .note{color:var(--muted);font-style:italic;font-size:.9rem}
+  .answer.ia{border-color:#6ea8fe;background:#141a30}
+  .answer.ia .tag{color:#9ec2ff}
+  .answer.ia .spin{display:inline-block;width:14px;height:14px;border:2px solid #3a4a78;
+    border-top-color:#9ec2ff;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:8px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .kw{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .kw span{background:#2a2048;border:1px solid var(--line);color:var(--gold2);
+    padding:5px 12px;border-radius:20px;font-size:.8rem;font-family:Arial,sans-serif}
+  .hint{color:var(--muted);font-size:.85rem;text-align:center;margin-top:8px;font-style:italic}
+  footer{text-align:center;color:var(--muted);font-size:.78rem;margin-top:46px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>El Tarot de Marsella</h1>
+    <div class="sub">Lectura simbólica según Alejandro Jodorowsky · con numerología y astrología</div>
+    <div class="stars">✦ ✧ ✦</div>
+  </header>
+
+  <div class="ask">
+    <div class="row">
+      <div>
+        <label for="nombre">Tu nombre completo</label>
+        <input type="text" id="nombre" placeholder="Ej. María Fernanda Soto">
+      </div>
+      <div>
+        <label for="nacimiento">Fecha de nacimiento</label>
+        <input type="date" id="nacimiento">
+      </div>
+    </div>
+    <div>
+      <label for="pregunta">Tu pregunta</label>
+      <textarea id="pregunta" placeholder="Escribe lo que quieres consultar..."></textarea>
+    </div>
+    <div>
+      <label>¿Sobre qué área es tu consulta?</label>
+      <div class="themes" id="themes">
+        <button class="theme active" data-t="general">General</button>
+        <button class="theme" data-t="amor">Amor</button>
+        <button class="theme" data-t="trabajo">Trabajo</button>
+        <button class="theme" data-t="decision">Decisión</button>
+        <button class="theme" data-t="salud">Salud</button>
+      </div>
+    </div>
+    <div id="grupos"></div>
+  </div>
+
+  <div class="stage">
+    <div class="card back" id="card">
+      <div class="frame"></div><div class="deco">✶</div><small>ARCANA</small>
+    </div>
+    <button class="draw" id="draw">Sacar mi carta</button>
+    <p class="hint" id="hint">Completa tus datos, concéntrate en tu pregunta y saca tu carta.</p>
+    <div class="reading" id="reading"></div>
+  </div>
+
+  <footer>
+    Lectura inspirada en el Tarot de Marsella de Alejandro Jodorowsky (lectura activa, sin cartas «al revés»),
+    integrada con numerología (camino de vida y número de expresión) y el elemento de tu signo.<br>
+    Para imágenes reales, crea una carpeta <b>cartas/</b> con archivos como <b>el-mago.jpg</b>.
+    Si no existen, se muestra el diseño simbólico.<br>
+    Herramienta para reflexión y autoconocimiento, no es consejo profesional.
+  </footer>
+</div>
+
+<script>
+// === Configuración IA ===
+// URL de tu Cloudflare Worker. Si la dejas vacía (""), funciona la versión sin IA.
+const WORKER_URL = "https://tarot-ia.nicolasfernandeztoro.workers.dev";
+
+const arcanos = [
+  {n:"El Loco", r:"sin número", f:"el-loco", g:"🚶", c:"var(--carne)",
+   phrase:"La energía libre que aún no tiene forma ni destino.",
+   txt:"El Loco es el viajero sin número: pura libertad en movimiento. Avanza guiado por su impulso vital, sin cargar el pasado ni temer el futuro. Te invita a soltar el control y dar el paso sin garantías.",
+   kw:["Libertad","Impulso","Comienzo","Confianza"],
+   t:{general:"Algo nuevo comienza; déjate guiar por tu impulso y no cargues con el pasado.",
+      amor:"En el amor te pide soltar el miedo y lanzarte sin exigir garantías; se abre una etapa libre.",
+      trabajo:"Es momento de un salto o de emprender algo sin un plan rígido; confía en tu instinto.",
+      decision:"La respuesta es avanzar: da el paso aunque no veas todo el camino.",
+      salud:"Suelta tensiones y rigideces; tu energía vital quiere moverse y fluir."}},
+  {n:"El Mago", r:"I", f:"el-mago", g:"🎩", c:"var(--rojo)",
+   phrase:"Todas las herramientas están sobre la mesa: empieza.",
+   txt:"El Bateleur tiene ante sí los cuatro elementos y la capacidad de iniciar cualquier cosa. Dispone de todos los recursos pero aún no se ha comprometido. El reto es elegir y comenzar de verdad.",
+   kw:["Inicio","Talento","Habilidad","Potencial"],
+   t:{general:"Todo está disponible para comenzar; el paso es decidirte y actuar.",
+      amor:"Tienes todo para iniciar o reavivar el vínculo; el reto es comprometerte, no solo seducir.",
+      trabajo:"Dispones de las herramientas para tu proyecto; pasa del potencial a la acción concreta.",
+      decision:"Puedes con esto: elige y comienza, tienes más recursos de los que crees.",
+      salud:"Buen momento para iniciar un hábito o tratamiento; tu voluntad activa el cambio."}},
+  {n:"La Papisa", r:"II", f:"la-papisa", g:"📖", c:"var(--azul)",
+   phrase:"El saber que madura en silencio, todavía sin manifestarse.",
+   txt:"La Papisa guarda un libro abierto: es el estudio interior, la gestación, la paciencia. Representa la sabiduría que aún no se expresa. No es momento de actuar hacia afuera, sino de profundizar y dejar madurar.",
+   kw:["Interioridad","Paciencia","Estudio","Misterio"],
+   t:{general:"Es tiempo de incubar, no de actuar; la sabiduría llega desde dentro.",
+      amor:"No fuerces; el vínculo necesita tiempo, silencio y profundidad antes de manifestarse.",
+      trabajo:"Estudia y observa antes de actuar; aún es etapa de gestación, no de mostrar.",
+      decision:"Espera y escucha tu interior; la respuesta madura en silencio, no decidas con prisa.",
+      salud:"Tu cuerpo pide reposo e introspección; escucha sus señales sutiles."}},
+  {n:"La Emperatriz", r:"III", f:"la-emperatriz", g:"👑", c:"var(--amarillo)",
+   phrase:"La idea florece y se vuelve fértil y visible.",
+   txt:"La Emperatriz es la creatividad que se expande, la fecundidad de la mente y de la vida. Lo que la Papisa guardaba, ella lo expresa y multiplica. Es momento de crear, comunicar y dejar que tus proyectos crezcan.",
+   kw:["Creatividad","Abundancia","Expresión","Fertilidad"],
+   t:{general:"Es momento de crear y expandirte; lo que siembres dará fruto.",
+      amor:"Etapa fértil: el amor florece, se expresa y se multiplica; deja crecer lo que sientes.",
+      trabajo:"Tu creatividad está en plenitud; crea, comunica y deja que tus proyectos den fruto.",
+      decision:"Elige lo que te haga crecer y florecer; la respuesta va hacia la abundancia.",
+      salud:"Energía floreciente; cuida tu cuerpo con placer y nutre tu vitalidad."}},
+  {n:"El Emperador", r:"IIII", f:"el-emperador", g:"🏛️", c:"var(--rojo)",
+   phrase:"Dar estructura, estabilidad y límites a lo creado.",
+   txt:"El Emperador encarna la realización material y el orden: la autoridad, la construcción sólida, el poder que estabiliza. Te pide responsabilidad, disciplina y capacidad de sostener lo que has construido.",
+   kw:["Estructura","Autoridad","Estabilidad","Realización"],
+   t:{general:"Pon los pies en la tierra y da estructura a tu vida; la estabilidad es la respuesta.",
+      amor:"El vínculo pide estructura, compromiso y estabilidad; construye sobre bases firmes.",
+      trabajo:"Organiza y asume el mando; es tiempo de construir algo sólido y duradero.",
+      decision:"Decide con responsabilidad y firmeza; pon orden y límites claros.",
+      salud:"Necesitas rutina, disciplina y orden para fortalecerte."}},
+  {n:"El Papa", r:"V", f:"el-papa", g:"🕊️", c:"var(--azul)",
+   phrase:"El puente entre lo de arriba y lo de abajo: el maestro.",
+   txt:"El Papa es el puente, el guía, el que transmite y une mundos: la enseñanza, la palabra que da sentido, la conexión espiritual encarnada. Es momento de buscar (u ofrecer) orientación y unir lo material con lo trascendente.",
+   kw:["Guía","Enseñanza","Unión","Sentido"],
+   t:{general:"Busca orientación y conexión con algo más grande; alguien o algo te guía.",
+      amor:"Un vínculo con sentido profundo y valores compartidos; quizá una unión formal o una guía.",
+      trabajo:"Busca (u ofrece) mentoría; el trabajo en equipo con sentido te abre camino.",
+      decision:"Escucha a un mentor o a tu voz interior sabia antes de decidir.",
+      salud:"Confía en un buen guía o terapeuta; sana también el sentido y el espíritu."}},
+  {n:"El Enamorado", r:"VI", f:"el-enamorado", g:"❤️", c:"var(--carne)",
+   phrase:"La gran elección que define tu camino.",
+   txt:"El Enamorado está entre dos figuras: es el momento de elegir. No es solo amor romántico, es la decisión que compromete tu vida y tu deseo. Debes escoger según tu verdad, no por presión externa.",
+   kw:["Elección","Amor","Deseo","Vínculo"],
+   t:{general:"Es momento de una elección que te compromete; escucha tu verdad.",
+      amor:"Estás ante una elección de corazón; decide según tu deseo, no por presión externa.",
+      trabajo:"Hay una elección entre dos caminos; escoge el que ames de verdad.",
+      decision:"Elige con el corazón; la respuesta exige decidir según lo que amas, no lo que conviene.",
+      salud:"Elige lo que te haga bien y te dé placer sano; alinea cuerpo y deseo."}},
+  {n:"El Carro", r:"VII", f:"el-carro", g:"🐎", c:"var(--amarillo)",
+   phrase:"El triunfo que avanza: salir al mundo y conquistar.",
+   txt:"El Carro es la victoria, el avance, la afirmación de uno mismo en el mundo. Tras la elección, llega la acción decidida. El desafío es dirigir las dos fuerzas sin que tiren en sentidos opuestos.",
+   kw:["Avance","Triunfo","Voluntad","Viaje"],
+   t:{general:"Es tiempo de avanzar y afirmarte; el éxito llega con voluntad dirigida.",
+      amor:"Avanza con decisión hacia lo que quieres; es momento de conquistar o dar un paso firme.",
+      trabajo:"Triunfo y avance: lánzate al proyecto y dirige tus fuerzas con foco.",
+      decision:"La respuesta es avanzar con determinación; ve por ello sin titubear.",
+      salud:"Tu energía está alta; canalízala con dirección, sin dispersarte."}},
+  {n:"La Justicia", r:"VIII", f:"la-justicia", g:"⚖️", c:"var(--rojo)",
+   phrase:"Equilibrio, medida y la verdad que corta con precisión.",
+   txt:"La Justicia sostiene espada y balanza: el equilibrio exacto, la objetividad, la consecuencia justa de los actos. Te invita a ser honesto contigo mismo y a aceptar las consecuencias de tus decisiones.",
+   kw:["Equilibrio","Verdad","Justicia","Rigor"],
+   t:{general:"Sé honesto y equilibrado; cada acto tiene su consecuencia justa.",
+      amor:"El vínculo busca equilibrio y honestidad; da y recibe en justa medida.",
+      trabajo:"Actúa con rectitud y orden; las consecuencias serán justas según lo que hagas.",
+      decision:"Decide con objetividad; sopesa con equilibrio y asume las consecuencias.",
+      salud:"Busca equilibrio y medida en tus hábitos; el cuerpo pide orden justo."}},
+  {n:"El Ermitaño", r:"VIIII", f:"el-ermitano", g:"🏮", c:"var(--azul)",
+   phrase:"Detenerse, iluminar el interior y buscar el sentido.",
+   txt:"El Ermitaño avanza despacio con su linterna: la introspección, la búsqueda de la sabiduría, el encuentro con uno mismo. Es momento de soledad fértil, prudencia y respuestas profundas.",
+   kw:["Introspección","Sabiduría","Prudencia","Búsqueda"],
+   t:{general:"Es tiempo de introspección y prudencia; busca el sentido en tu interior.",
+      amor:"Necesitas un tiempo a solas para entender qué sientes; no fuerces, ilumina tu interior.",
+      trabajo:"Avanza despacio y con prudencia; busca en profundidad antes de comprometerte.",
+      decision:"Tómate tu tiempo y mira hacia dentro; la respuesta surge de la introspección.",
+      salud:"Tu cuerpo pide calma, soledad fértil y descanso reparador."}},
+  {n:"La Rueda de la Fortuna", r:"X", f:"la-rueda", g:"☸️", c:"var(--amarillo)",
+   phrase:"El ciclo gira: termina una etapa y comienza otra.",
+   txt:"La Rueda es el movimiento cíclico de la vida, el cambio inevitable, el destino en marcha. Nada es permanente; lo que está abajo subirá y viceversa. Suelta lo que terminó y prepárate para una nueva vuelta.",
+   kw:["Ciclo","Cambio","Destino","Renovación"],
+   t:{general:"Algo cambia inevitablemente; suelta lo viejo y abraza la nueva vuelta.",
+      amor:"Un ciclo termina y otro empieza en tu vida afectiva; acepta el cambio que llega.",
+      trabajo:"Hay un giro en marcha; suelta lo que terminó y prepárate para lo nuevo.",
+      decision:"La respuesta está en fluir con el cambio; el ciclo gira igual.",
+      salud:"Tu energía cambia de fase; acompaña el ciclo en vez de resistirlo."}},
+  {n:"La Fuerza", r:"XI", f:"la-fuerza", g:"🦁", c:"var(--carne)",
+   phrase:"Domar al instinto con dulzura, no con violencia.",
+   txt:"Una mujer abre sin esfuerzo las fauces de un león: el dominio sereno de los instintos, la fuerza interior que no necesita violencia. Tienes más fuerza de la que crees: úsala con amor y firmeza.",
+   kw:["Coraje","Dominio","Energía vital","Suavidad"],
+   t:{general:"Domina lo que te desborda con dulzura; tu fuerza interior es la respuesta.",
+      amor:"Ama con coraje suave; domina los impulsos con dulzura, no con control.",
+      trabajo:"Tienes la fuerza interior para lograrlo; persiste con firmeza serena.",
+      decision:"Tienes más fuerza de la que crees; decide con coraje tranquilo.",
+      salud:"Integra tu energía vital con amor; la fuerza suave sana más que la lucha."}},
+  {n:"El Colgado", r:"XII", f:"el-colgado", g:"🙃", c:"var(--azul)",
+   phrase:"Ver el mundo al revés: el sacrificio que transforma.",
+   txt:"El Colgado pende de un pie, sereno: la pausa, el cambio de perspectiva, la entrega voluntaria. No es castigo, es gestación. Suspende tus certezas y deja que una nueva manera de ver nazca en ti.",
+   kw:["Pausa","Perspectiva","Entrega","Transformación"],
+   t:{general:"Cambia de perspectiva y suelta; la respuesta nace de ver al revés.",
+      amor:"Quizás debas pausar y mirar el vínculo desde otro ángulo; suelta el control.",
+      trabajo:"Es momento de pausa y cambio de perspectiva; no fuerces, deja madurar.",
+      decision:"No decidas aún; cambia de punto de vista y acepta la espera fértil.",
+      salud:"Tu cuerpo pide pausa y entrega; descansa y suelta la tensión del control."}},
+  {n:"El Arcano sin Nombre", r:"XIII", f:"arcano-sin-nombre", g:"💀", c:"var(--rojo)",
+   phrase:"Limpiar, podar, dejar morir lo que ya no sirve.",
+   txt:"La carta XIII no tiene nombre: siega lo viejo para que vuelva a brotar. No anuncia la muerte literal sino la transformación radical y la limpieza profunda. Estás en un renacimiento, no en un final.",
+   kw:["Transformación","Limpieza","Fin de ciclo","Renacer"],
+   t:{general:"Transformación radical: corta lo muerto y deja florecer lo nuevo.",
+      amor:"Algo debe terminar para que nazca lo nuevo; suelta lo muerto del vínculo sin miedo.",
+      trabajo:"Limpia y poda lo que ya no sirve; un cierre da paso a una transformación.",
+      decision:"La respuesta es soltar y cerrar un ciclo; es un renacimiento, no un final.",
+      salud:"Tiempo de limpieza profunda; deja ir lo viejo para renovar tu energía."}},
+  {n:"La Templanza", r:"XIIII", f:"la-templanza", g:"👼", c:"var(--azul)",
+   phrase:"El ángel que mezcla y armoniza las energías de la vida.",
+   txt:"La Templanza vierte un líquido entre dos copas: la circulación de la energía, la curación, la armonía recobrada. Es momento de paciencia y de dejar que las cosas se reequilibren con suavidad.",
+   kw:["Armonía","Sanación","Equilibrio","Fluir"],
+   t:{general:"Armonía y sanación; deja que la vida fluya y se reequilibre.",
+      amor:"Llega la sanación y la armonía; el vínculo se reequilibra suavemente, deja fluir.",
+      trabajo:"Busca el equilibrio y la colaboración fluida; las cosas se reacomodan con paciencia.",
+      decision:"Decide con templanza y paciencia; la respuesta está en armonizar, no en forzar.",
+      salud:"Tiempo de curación y equilibrio; deja que tu energía circule y se restaure."}},
+  {n:"El Diablo", r:"XV", f:"el-diablo", g:"🔥", c:"var(--rojo)",
+   phrase:"La fuerza creativa y el deseo, atados o liberados.",
+   txt:"El Diablo sostiene a dos figuras encadenadas, pero las cadenas están flojas: la energía del deseo, el placer, la creatividad y también lo que nos esclaviza. ¿Qué te encadena y, sin embargo, podrías soltar?",
+   kw:["Deseo","Creatividad","Ataduras","Energía"],
+   t:{general:"Tu potencia y deseo están activos; reconoce qué te ata y libéralo.",
+      amor:"Hay pasión intensa y atracción fuerte; pregúntate qué te ata y qué te libera en el deseo.",
+      trabajo:"Mucha energía creativa y ambición; cuida no quedar atrapado en lo que crees que te sujeta.",
+      decision:"Mira qué te encadena: tu fuerza más potente vive ahí, puedes soltarla o usarla.",
+      salud:"Atiende los excesos o ataduras; canaliza tu energía vital sin que te domine."}},
+  {n:"La Torre", r:"XVI", f:"la-torre", g:"🗼", c:"var(--rojo)",
+   phrase:"El estallido liberador que rompe lo que aprisionaba.",
+   txt:"Un rayo derriba la corona de la torre: la ruptura súbita, la liberación de lo que estaba demasiado encerrado. Aunque asuste, libera. Lo que se derrumba estaba conteniendo algo que necesitaba salir.",
+   kw:["Ruptura","Liberación","Crisis","Apertura"],
+   t:{general:"Algo se rompe para liberarte; lo que se derrumba necesitaba salir.",
+      amor:"Una ruptura o sacudida libera lo que estaba demasiado encerrado; aunque duela, abre.",
+      trabajo:"Un cambio súbito derrumba lo viejo; es liberación, no solo crisis.",
+      decision:"La respuesta llega como un quiebre necesario; lo que cae estaba conteniéndote.",
+      salud:"Una crisis libera tensión acumulada; deja salir lo que estaba reprimido."}},
+  {n:"La Estrella", r:"XVII", f:"la-estrella", g:"⭐", c:"var(--azul)",
+   phrase:"La esperanza desnuda que riega la tierra y el agua.",
+   txt:"Una mujer vierte dos cántaros bajo las estrellas: la esperanza, la generosidad, la conexión con lo natural y lo cósmico. Es momento de fluir con naturalidad, de dar y recibir, de reconectar con tu fuente.",
+   kw:["Esperanza","Generosidad","Naturaleza","Renovación"],
+   t:{general:"Esperanza renovada; reconecta con tu fuente y da con generosidad.",
+      amor:"Esperanza y entrega sin máscara; un vínculo natural y generoso se renueva.",
+      trabajo:"Confía y fluye con naturalidad; llega calma fértil y nuevas posibilidades.",
+      decision:"La respuesta es confiar y fluir; renueva la esperanza y entrégate a la vida.",
+      salud:"Calma reparadora y reconexión con lo natural; tu energía se restaura."}},
+  {n:"La Luna", r:"XVIII", f:"la-luna", g:"🌙", c:"var(--azul)",
+   phrase:"Las aguas profundas: emociones, sueños e intuición.",
+   txt:"Bajo la Luna se abre el mundo de lo inconsciente, lo emocional, lo que se gesta en la sombra. Puede haber confusión, pero también una intuición poderosa. Confía en tus sueños y deja aflorar tus emociones.",
+   kw:["Intuición","Emoción","Inconsciente","Misterio"],
+   t:{general:"Mundo emocional e intuitivo activo; confía en lo que sientes aunque no lo veas claro.",
+      amor:"Hay emociones profundas y quizá confusión; confía en tu intuición, no todo está claro aún.",
+      trabajo:"Terreno incierto; guíate por la intuición y cuida los malentendidos.",
+      decision:"No todo es visible; escucha tus sueños e intuición antes de decidir.",
+      salud:"Atiende lo emocional y lo que se gesta en la sombra; cuida tu descanso."}},
+  {n:"El Sol", r:"XVIIII", f:"el-sol", g:"☀️", c:"var(--amarillo)",
+   phrase:"La alegría compartida: claridad, calor y vínculo.",
+   txt:"Dos niños juegan bajo un sol radiante: la claridad, la alegría sencilla, la cooperación y el amor fraterno. Es momento de calidez, de mostrarte tal cual eres y de disfrutar lo bueno que compartes.",
+   kw:["Alegría","Claridad","Unión","Vitalidad"],
+   t:{general:"Alegría, claridad y vínculo; sale el sol sobre tu consulta.",
+      amor:"Claridad y alegría compartida; el vínculo se ilumina, muéstrate tal cual eres.",
+      trabajo:"Éxito luminoso y buena colaboración; disfruta y comunica con calidez.",
+      decision:"La respuesta es luminosa y positiva; ve hacia lo que te da alegría y claridad.",
+      salud:"Vitalidad y energía radiante; el cuerpo florece, disfruta."}},
+  {n:"El Juicio", r:"XX", f:"el-juicio", g:"🎺", c:"var(--azul)",
+   phrase:"El llamado que despierta y hace renacer.",
+   txt:"Un ángel toca la trompeta y las figuras resucitan: el renacimiento, la vocación, el despertar a una nueva vida. Algo en ti se reorganiza y emerge. Escucha esa llamada interior: estás listo para una nueva etapa.",
+   kw:["Renacimiento","Vocación","Despertar","Llamado"],
+   t:{general:"Un llamado te despierta a una nueva etapa, más consciente y verdadera.",
+      amor:"Un renacer en el vínculo o un llamado del corazón; escucha esa voz que te despierta.",
+      trabajo:"Una vocación o llamado profundo emerge; es momento de renacer profesionalmente.",
+      decision:"Escucha el llamado interior; la respuesta te invita a renacer y reorganizarte.",
+      salud:"Recuperación y renacimiento; algo en ti se sana y despierta."}},
+  {n:"El Mundo", r:"XXI", f:"el-mundo", g:"🌍", c:"var(--amarillo)",
+   phrase:"La realización plena: el centro danzante de todo.",
+   txt:"Una figura danza dentro de una corona, rodeada por los cuatro vivientes: la culminación, la integración total, la unión de todas las fuerzas. Has integrado tus opuestos. Es plenitud y el inicio de un nuevo ciclo más completo.",
+   kw:["Plenitud","Integración","Realización","Totalidad"],
+   t:{general:"Realización y plenitud; integras tus opuestos y se abre un ciclo mayor.",
+      amor:"Plenitud y unión integrada; el vínculo alcanza una etapa completa y armoniosa.",
+      trabajo:"Culminación y logro; integras todo lo aprendido, un ciclo se corona.",
+      decision:"La respuesta es de plenitud; vas hacia la realización e integración total.",
+      salud:"Integración y bienestar pleno; tu energía se armoniza por completo."}}
+];
+
+const temaLabel={general:"General",amor:"Amor",trabajo:"Trabajo",decision:"Decisión",salud:"Salud"};
+
+const LP={
+  1:{k:"Liderazgo",d:"naciste para iniciar, decidir y abrir camino con independencia"},
+  2:{k:"Cooperación",d:"tu fuerza está en la sensibilidad, la unión y el equilibrio entre personas"},
+  3:{k:"Expresión",d:"la creatividad, la comunicación y la alegría son tu vía de realización"},
+  4:{k:"Construcción",d:"el trabajo, el orden y la constancia son la base de tu vida"},
+  5:{k:"Libertad",d:"el cambio, la aventura y la versatilidad mueven tu existencia"},
+  6:{k:"Amor y servicio",d:"la familia, la responsabilidad afectiva y la armonía guían tu camino"},
+  7:{k:"Sabiduría",d:"la introspección, el análisis y la búsqueda espiritual son tu sendero"},
+  8:{k:"Poder y materia",d:"los logros, la abundancia y la gestión del mundo material te pertenecen"},
+  9:{k:"Entrega",d:"el humanitarismo, la compasión y el cierre de ciclos definen tu misión"},
+  11:{k:"Intuición maestra",d:"eres un canal de inspiración e intuición elevada, con una sensibilidad fuera de lo común"},
+  22:{k:"Constructor maestro",d:"puedes materializar grandes visiones que sirvan a muchos"},
+  33:{k:"Maestro del amor",d:"tu camino es sanar y elevar a otros desde el amor incondicional"}
+};
+const EX={1:"liderar y emprender",2:"mediar y armonizar",3:"comunicar y crear",
+  4:"organizar y construir",5:"explorar y adaptarte",6:"cuidar y dar armonía",
+  7:"investigar y comprender en profundidad",8:"gestionar y materializar",
+  9:"inspirar y entregarte a los demás",11:"inspirar desde la intuición",
+  22:"materializar grandes proyectos",33:"sanar y elevar a quienes te rodean"};
+const ELE={Aries:"fuego",Leo:"fuego",Sagitario:"fuego",Tauro:"tierra",Virgo:"tierra",
+  Capricornio:"tierra","Géminis":"aire",Libra:"aire",Acuario:"aire",
+  "Cáncer":"agua",Escorpio:"agua",Piscis:"agua"};
+const ELED={fuego:"la pasión y la acción te impulsan a moverte sin demora",
+  tierra:"lo concreto, la paciencia y los pasos firmes te sostienen",
+  aire:"las ideas, la palabra y la mirada amplia te guían",
+  agua:"la emoción y la intuición profunda te orientan"};
+
+const VAL={a:1,b:2,c:3,d:4,e:5,f:6,g:7,h:8,i:9,j:1,k:2,l:3,m:4,n:5,o:6,p:7,q:8,r:9,
+  s:1,t:2,u:3,v:4,w:5,x:6,y:7,z:8};
+
+function reducir(n){while(n>9 && n!==11 && n!==22 && n!==33){
+  n=String(n).split('').reduce((a,d)=>a+ +d,0);} return n;}
+function caminoVida(f){const d=f.replace(/[^0-9]/g,'');
+  return reducir(d.split('').reduce((a,x)=>a+ +x,0));}
+function expresion(nombre){const t=nombre.toLowerCase().normalize('NFD')
+    .replace(/[̀-ͯ]/g,'').replace(/ñ/g,'n');
+  let s=0; for(const ch of t){if(VAL[ch]) s+=VAL[ch];}
+  return s?reducir(s):null;}
+function edadDe(f){const b=new Date(f+'T00:00:00'),h=new Date();
+  let e=h.getFullYear()-b.getFullYear();const m=h.getMonth()-b.getMonth();
+  if(m<0||(m===0&&h.getDate()<b.getDate()))e--;return e;}
+function signoDe(f){const d=new Date(f+'T00:00:00'),m=d.getMonth()+1,dd=d.getDate();
+  const cut=[20,19,21,20,21,21,23,23,23,23,22,22];
+  const nm=["Capricornio","Acuario","Piscis","Aries","Tauro","Géminis","Cáncer",
+    "Leo","Virgo","Libra","Escorpio","Sagitario","Capricornio"];
+  return dd<cut[m-1]?nm[m-1]:nm[m];}
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+let tema="general";
+const card=document.getElementById('card'),reading=document.getElementById('reading'),
+  hint=document.getElementById('hint'),btn=document.getElementById('draw'),
+  pregunta=document.getElementById('pregunta'),nombre=document.getElementById('nombre'),
+  nacimiento=document.getElementById('nacimiento');
+
+document.getElementById('themes').addEventListener('click',e=>{
+  const b=e.target.closest('.theme'); if(!b)return;
+  document.querySelectorAll('#themes .theme').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); tema=b.dataset.t;});
+
+// Grupos de parámetros que enriquecen la consulta (estilo lectura jodorowskiana)
+const GRUPOS=[
+ {id:"momento",label:"Tu momento de vida",opts:["Inicio","Transición","Estancamiento","Crisis","Expansión","Cierre"]},
+ {id:"animo",label:"Cómo te sientes hoy",opts:["Calma","Ansiedad","Esperanza","Miedo","Confusión","Rabia"]},
+ {id:"busca",label:"Qué buscas en la consulta",opts:["Claridad","Decidir","Comprender","Soltar","Sanar","Impulso"]},
+ {id:"prof",label:"Profundidad de la respuesta",opts:["Práctica","Equilibrada","Profunda"]},
+ {id:"tono",label:"Tono del oráculo",opts:["Directo","Poético","Contenedor"]}
+];
+const sel={};
+(function(){
+  const cont=document.getElementById('grupos');
+  GRUPOS.forEach(g=>{
+    const wrap=document.createElement('div');
+    const lab=document.createElement('label'); lab.textContent=g.label; wrap.appendChild(lab);
+    const row=document.createElement('div'); row.className='themes'; row.dataset.group=g.id;
+    g.opts.forEach(o=>{
+      const b=document.createElement('button');
+      b.className='theme'; b.dataset.v=o; b.textContent=o; row.appendChild(b);
+    });
+    wrap.appendChild(row); cont.appendChild(wrap);
+  });
+  cont.addEventListener('click',e=>{
+    const b=e.target.closest('.theme'); if(!b) return;
+    const row=b.parentElement, gid=row.dataset.group, activo=b.classList.contains('active');
+    row.querySelectorAll('.theme').forEach(x=>x.classList.remove('active'));
+    if(activo){ delete sel[gid]; } else { b.classList.add('active'); sel[gid]=b.dataset.v; }
+  });
+})();
+
+function perfil(){
+  const nom=nombre.value.trim(), fec=nacimiento.value;
+  const p={nombre:nom};
+  if(fec){
+    p.edad=edadDe(fec); p.signo=signoDe(fec); p.elemento=ELE[p.signo];
+    p.lp=caminoVida(fec); p.lpData=LP[p.lp];
+  }
+  if(nom){ p.expr=expresion(nom); }
+  p.completo = !!fec;
+  return p;
+}
+
+function drawCard(){
+  const a=arcanos[Math.floor(Math.random()*arcanos.length)];
+  const q=pregunta.value.trim(), p=perfil(), parametros={...sel};
+
+  card.className='card'; card.style.transform='rotateY(180deg)';
+  setTimeout(()=>{card.style.transform='rotateY(0deg)';},150);
+  card.innerHTML=
+    '<img class="card-img" src="cartas/'+a.f+'.jpg" alt="'+a.n+'" onerror="this.style.display=\'none\'">'+
+    '<div class="frame"></div><div class="num">'+a.r+'</div>'+
+    '<div class="glyph" style="color:'+a.c+'">'+a.g+'</div>'+
+    '<div class="name">'+a.n+'</div>';
+
+  reading.classList.remove('show');
+  setTimeout(()=>{
+    let ans='<span class="tag">Lectura integrada · '+temaLabel[tema]+'</span>';
+    if(q) ans+='<div class="q">«'+esc(q)+'»</div>';
+    const intro = p.nombre ? esc(p.nombre)+', la carta <b>'+a.n+'</b> responde a tu consulta. '
+                           : 'La carta <b>'+a.n+'</b> responde a tu consulta. ';
+    ans+='<p>'+intro+a.t[tema]+'</p>';
+    if(p.completo){
+      ans+='<div class="perfil">'+
+        '<span>Edad: '+p.edad+'</span>'+
+        '<span>Signo: '+p.signo+' · '+p.elemento+'</span>'+
+        '<span>Camino de vida: '+p.lp+'</span>'+
+        (p.expr?'<span>Nº de nombre: '+p.expr+'</span>':'')+'</div>';
+      ans+='<p>Tu <b>camino de vida '+p.lp+'</b> ('+p.lpData.k+'): '+p.lpData.d+'.</p>';
+      if(p.expr) ans+='<p>El número de tu nombre es <b>'+p.expr+'</b>: tu don natural es <b>'+EX[p.expr]+'</b>.</p>';
+      ans+='<p>Como <b>'+p.signo+'</b>, de elemento '+p.elemento+', '+ELED[p.elemento]+'.</p>';
+    } else if(p.expr){
+      ans+='<p>El número de tu nombre es <b>'+p.expr+'</b>: tu don natural es <b>'+EX[p.expr]+'</b>.</p>';
+      ans+='<p class="note">Agrega tu fecha de nacimiento para sumar tu signo y tu camino de vida a la lectura.</p>';
+    } else {
+      ans+='<p class="note">Completa tu nombre y fecha de nacimiento arriba para una lectura integrada con numerología y tu signo.</p>';
+    }
+
+    reading.innerHTML=
+      '<div class="roman">'+a.r+'</div><h2>'+a.n+'</h2>'+
+      '<div class="phrase">«'+a.phrase+'»</div><p>'+a.txt+'</p>'+
+      '<div id="ia-box"></div>'+
+      '<div class="kw">'+a.kw.map(k=>'<span>'+k+'</span>').join('')+'</div>';
+    reading.classList.add('show');
+    if(WORKER_URL) pedirIA(a,q,p,ans,parametros);
+    else document.getElementById('ia-box').innerHTML='<div class="answer">'+ans+'</div>';
+  },250);
+  hint.textContent='Saca otra carta cuando quieras consultar de nuevo.';
+  btn.textContent='Sacar otra carta';
+}
+btn.addEventListener('click',drawCard);
+
+async function pedirIA(a,q,p,ans,parametros){
+  const box=document.getElementById('ia-box');
+  if(!box) return;
+  box.innerHTML='<div class="answer ia"><span class="tag">La voz del Oráculo · '+temaLabel[tema]+
+    '</span><p class="note"><span class="spin"></span>Tejiendo tu lectura...</p></div>';
+  const perfilD = p.completo ? {
+      nombre:p.nombre||null, edad:p.edad, signo:p.signo, elemento:p.elemento,
+      caminoVida:p.lp, caminoVidaSignificado:p.lpData.k,
+      numeroNombre:p.expr||null, numeroNombreDon:p.expr?EX[p.expr]:null
+    } : {nombre:p.nombre||null};
+  try{
+    const r=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({pregunta:q,tema:temaLabel[tema],carta:a.n,frase:a.phrase,perfil:perfilD,parametros})});
+    const j=await r.json();
+    const txt=(j.text||'').trim();
+    if(txt){
+      box.innerHTML='<div class="answer ia"><span class="tag">La voz del Oráculo · '+temaLabel[tema]+'</span>'+
+        txt.split(/\n+/).filter(Boolean).map(x=>'<p>'+esc(x)+'</p>').join('')+'</div>';
+    } else {
+      box.innerHTML='<div class="answer">'+ans+'</div>';
+    }
+  }catch(e){
+    box.innerHTML='<div class="answer">'+ans+'</div>';
+  }
+}
+</script>
+</body>
+</html>
