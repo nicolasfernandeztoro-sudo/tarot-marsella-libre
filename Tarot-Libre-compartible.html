@@ -1,62 +1,999 @@
-const WORKER_URL = "/api/tarot";
-const WORKER_HEALTH_URL = "/api/health";
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Tarot de Marsella Libre: lectura simbólica gratuita. No cobra, no predice y no guarda tus datos.">
+<meta name="theme-color" content="#101116">
+<title>Tarot de Marsella Libre</title>
+<!--
+  ARCHIVO COMPARTIBLE (build de un solo archivo).
+  Generado desde src/main.js + src/styles/main.css.
+  · Script clásico (sin módulos ES) para que funcione al abrirlo desde file://.
+  · Worker e imágenes apuntan a https://tarot-marsella-docfertoro.pages.dev (funcionan con conexión).
+  · Sin conexión: cae a la lectura local, nunca a "solo el fondo".
+  NO editar a mano: regenerar con scripts/bundle.mjs.
+-->
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #101116;
+  --bg-soft: #171820;
+  --paper: #211f21;
+  --paper-2: #272326;
+  --ink: #f3eadb;
+  --muted: #b8ad9d;
+  --quiet: #8f877c;
+  --line: rgba(226, 205, 166, 0.22);
+  --gold: #b89a5e;
+  --burgundy: #5a1f27;
+  --shadow: rgba(0, 0, 0, 0.34);
+}
 
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 28% 0%, rgba(184, 154, 94, 0.14), transparent 28rem),
+    radial-gradient(circle at 80% 18%, rgba(90, 31, 39, 0.22), transparent 24rem),
+    linear-gradient(135deg, #0c0d12 0%, #15161d 54%, #111014 100%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.18;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 26px 26px, 26px 26px;
+  mask-image: linear-gradient(to bottom, black, transparent 80%);
+}
+
+button,
+textarea,
+input {
+  font: inherit;
+}
+
+.app-shell {
+  width: min(1080px, calc(100% - 32px));
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 54px 0 30px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 34px;
+  align-items: end;
+  padding: 18px 0 30px;
+}
+
+.hero-copy {
+  max-width: 760px;
+}
+
+.kicker,
+.result-mode {
+  margin: 0 0 14px;
+  color: var(--gold);
+  font-family: Arial, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.fallback-notice {
+  margin: -6px 0 14px;
+  border-left: 2px solid rgba(184, 154, 94, 0.58);
+  padding-left: 10px;
+  color: var(--quiet) !important;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+h1 {
+  max-width: 820px;
+  margin: 0;
+  font-size: clamp(2.35rem, 7vw, 5.4rem);
+  font-weight: 400;
+  line-height: 0.96;
+  letter-spacing: 0;
+}
+
+.subtitle {
+  max-width: 620px;
+  margin: 22px 0 0;
+  color: var(--muted);
+  font-size: 1.08rem;
+  line-height: 1.7;
+}
+
+.hero-phrase {
+  max-width: 680px;
+  margin: 18px 0 0;
+  color: var(--gold);
+  font-size: clamp(1.25rem, 3vw, 2.15rem);
+  line-height: 1.22;
+}
+
+.microcopy {
+  max-width: 540px;
+  margin: 12px 0 0;
+  color: var(--quiet);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.daily-card {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  justify-self: end;
+  width: min(220px, 100%);
+}
+
+.daily-card img {
+  width: 100%;
+  max-height: 315px;
+  object-fit: contain;
+  border: 1px solid rgba(184, 154, 94, 0.36);
+  border-radius: 8px;
+  padding: 10px;
+  background:
+    linear-gradient(180deg, rgba(243, 234, 219, 0.08), rgba(90, 31, 39, 0.12)),
+    rgba(12, 13, 18, 0.72);
+  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.28);
+}
+
+.daily-card figcaption {
+  display: grid;
+  gap: 3px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.daily-card strong {
+  color: #fff7e8;
+  font-weight: 400;
+}
+
+.daily-card-kicker {
+  color: var(--gold);
+  font-family: Arial, sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.manifesto-panel {
+  max-width: 760px;
+  margin: 0 0 24px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 18px 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.manifesto-lead {
+  margin: 0 0 10px;
+  color: #fff2d9;
+}
+
+.manifesto-compact {
+  margin: 0 0 8px;
+  color: var(--quiet);
+  font-size: 0.95rem;
+}
+
+.manifesto-details {
+  margin-top: 12px;
+}
+
+.manifesto-details summary {
+  display: inline-flex;
+  color: var(--gold);
+  cursor: pointer;
+  font-family: Arial, sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.manifesto-details summary:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 4px;
+}
+
+.manifesto-details ol {
+  margin: 14px 0 0;
+  padding-left: 22px;
+}
+
+.manifesto-details li {
+  margin-bottom: 10px;
+  color: var(--quiet);
+}
+
+.manifesto-details strong {
+  color: var(--ink);
+  font-weight: 400;
+}
+
+.question-guide {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(320px, 1fr);
+  gap: 22px;
+  align-items: start;
+  margin: 0 0 26px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 20px;
+  background: rgba(16, 17, 22, 0.52);
+}
+
+.privacy-panel {
+  margin: 0 0 26px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 18px 0;
+}
+
+.privacy-panel h2 {
+  margin: 0 0 12px;
+  color: #fff7e8;
+  font-size: clamp(1.35rem, 2.5vw, 1.9rem);
+  font-weight: 400;
+}
+
+.privacy-panel ul,
+.method-panel ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.privacy-panel li,
+.method-panel li {
+  margin: 0 0 8px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.question-guide h2 {
+  margin: 0 0 12px;
+  color: #fff7e8;
+  font-size: clamp(1.55rem, 3vw, 2.15rem);
+  font-weight: 400;
+  line-height: 1.08;
+}
+
+.question-guide p {
+  margin: 0 0 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.install-note {
+  color: var(--quiet) !important;
+  font-size: 0.92rem;
+}
+
+.question-examples {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.question-examples li {
+  border-left: 2px solid rgba(184, 154, 94, 0.54);
+  padding: 2px 0 2px 14px;
+}
+
+.question-before,
+.question-after {
+  display: block;
+  line-height: 1.5;
+}
+
+.question-before {
+  color: var(--quiet);
+  font-size: 0.9rem;
+}
+
+.question-before::before {
+  content: "Menos útil: ";
+  color: rgba(184, 154, 94, 0.76);
+  font-family: Arial, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.question-after {
+  margin-top: 4px;
+  color: var(--ink);
+}
+
+.question-after::before {
+  content: "Mejor: ";
+  color: var(--gold);
+  font-family: Arial, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.experience-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 1.1fr);
+  gap: 26px;
+  align-items: start;
+  margin-top: 6px;
+}
+
+.question-form,
+.result-panel,
+.empty-result {
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(140deg, rgba(255, 255, 255, 0.035), transparent 36%),
+    linear-gradient(180deg, rgba(39, 35, 38, 0.94), rgba(24, 24, 31, 0.94));
+  box-shadow: 0 18px 60px var(--shadow);
+}
+
+.question-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px;
+  border-radius: 8px;
+}
+
+.question-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: -8px;
+}
+
+.question-tool-button {
+  padding: 7px 12px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  background: rgba(16, 17, 22, 0.48);
+}
+
+.field-label,
+legend {
+  color: var(--ink);
+  font-family: Arial, sans-serif;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+textarea {
+  width: 100%;
+  min-height: 150px;
+  resize: vertical;
+  border: 1px solid rgba(226, 205, 166, 0.28);
+  border-radius: 8px;
+  padding: 15px 16px;
+  color: var(--ink);
+  background: rgba(12, 13, 18, 0.74);
+  line-height: 1.6;
+  outline: none;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="date"] {
+  width: 100%;
+  border: 1px solid rgba(226, 205, 166, 0.28);
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: var(--ink);
+  background: rgba(12, 13, 18, 0.74);
+  line-height: 1.4;
+  outline: none;
+}
+
+textarea:focus-visible,
+input:focus-visible,
+.primary-button:focus-visible,
+.secondary-button:focus-visible,
+.area-pill:has(input:focus-visible) span {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+.area-group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.area-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.area-pill input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.area-pill span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  max-width: 100%;
+  border: 1px solid rgba(226, 205, 166, 0.22);
+  border-radius: 999px;
+  padding: 8px 13px;
+  color: var(--muted);
+  background: rgba(16, 17, 22, 0.55);
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.area-pill input:checked + span {
+  border-color: rgba(184, 154, 94, 0.72);
+  color: var(--ink);
+  background: rgba(90, 31, 39, 0.5);
+}
+
+.method-slot {
+  border-left: 1px solid rgba(184, 154, 94, 0.46);
+  padding-left: 12px;
+  color: var(--quiet);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.form-intro,
+.field-help,
+.privacy-note {
+  margin: -6px 0 0;
+  color: var(--quiet);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.form-intro {
+  margin: 0;
+  color: #fff2d9;
+  font-style: italic;
+}
+
+.advanced-options {
+  border: 1px solid rgba(226, 205, 166, 0.18);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: rgba(12, 13, 18, 0.36);
+}
+
+.advanced-options summary {
+  color: var(--gold);
+  cursor: pointer;
+  font-family: Arial, sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.advanced-content {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.form-error {
+  margin: 0;
+  color: #ffd8d8;
+  font-size: 0.92rem;
+}
+
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  border: 1px solid rgba(184, 154, 94, 0.8);
+  border-radius: 999px;
+  padding: 12px 20px;
+  color: #fff4dd;
+  background: linear-gradient(180deg, rgba(90, 31, 39, 0.96), rgba(52, 24, 31, 0.96));
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, opacity 160ms ease;
+}
+
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(184, 154, 94, 0.58);
+  border-radius: 999px;
+  padding: 9px 15px;
+  color: #fff4dd;
+  background: rgba(16, 17, 22, 0.68);
+  cursor: pointer;
+}
+
+.primary-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(243, 234, 219, 0.76);
+}
+
+.primary-button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+  transform: none;
+}
+
+.empty-result {
+  display: grid;
+  min-height: 230px;
+  place-items: center;
+  border-radius: 8px;
+  padding: 28px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.result-panel {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 22px;
+  border-radius: 8px;
+  padding: 22px;
+}
+
+.result-panel--crisis {
+  grid-template-columns: 1fr;
+  border-color: rgba(255, 216, 216, 0.34);
+  background:
+    linear-gradient(140deg, rgba(255, 216, 216, 0.045), transparent 38%),
+    linear-gradient(180deg, rgba(39, 35, 38, 0.96), rgba(24, 24, 31, 0.96));
+}
+
+.symbol-card {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  place-items: center;
+  overflow: hidden;
+  margin: 0;
+  min-height: 292px;
+  border: 1px solid rgba(184, 154, 94, 0.38);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(243, 234, 219, 0.08), rgba(90, 31, 39, 0.12)),
+    var(--paper);
+  color: var(--gold);
+  text-align: center;
+}
+
+.symbol-card img {
+  width: 100%;
+  height: 100%;
+  max-height: 360px;
+  object-fit: contain;
+  padding: 10px;
+  background: rgba(8, 8, 11, 0.32);
+}
+
+.card-caption {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  border-top: 1px solid rgba(184, 154, 94, 0.24);
+  padding: 10px 8px 11px;
+  background: rgba(16, 17, 22, 0.74);
+}
+
+.card-number {
+  color: var(--gold);
+  font-family: Arial, sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.card-name {
+  color: #fff7e8;
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+.skeleton-card {
+  position: relative;
+}
+
+.skeleton-card::after {
+  content: "";
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(184, 154, 94, 0.38);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.result-copy h2 {
+  margin: 0;
+  color: #fff7e8;
+  font-size: clamp(1.65rem, 3vw, 2.25rem);
+  font-weight: 400;
+  line-height: 1.08;
+}
+
+.symbol-name {
+  margin: 6px 0 18px;
+  color: var(--gold);
+}
+
+.card-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin: -6px 0 18px;
+  padding: 0;
+  list-style: none;
+}
+
+.card-keywords li {
+  border-bottom: 1px solid rgba(184, 154, 94, 0.34);
+  padding: 0 0 3px;
+  color: #cfc4b3;
+  background: transparent;
+  font-family: Arial, sans-serif;
+  font-size: 0.73rem;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+
+.reframed-question,
+.tarot-phrase {
+  color: #fff2d9 !important;
+  font-style: italic;
+}
+
+.result-copy p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.soft-guidance {
+  color: var(--ink) !important;
+}
+
+.reading-section,
+.symbolic-act {
+  border-left: 1px solid rgba(184, 154, 94, 0.38);
+  padding-left: 12px;
+}
+
+.reading-section--tension {
+  border-left-color: rgba(184, 154, 94, 0.72);
+  color: #fff2d9 !important;
+}
+
+.reading-section--etapa {
+  border-left-color: rgba(184, 154, 94, 0.28);
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.reading-label {
+  color: var(--gold);
+  font-family: Arial, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sources-note {
+  margin-top: 14px;
+  color: rgba(226, 205, 166, 0.7) !important;
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+}
+
+.symbolic-act {
+  color: #fff2d9 !important;
+}
+
+.support-note {
+  border-left: 2px solid rgba(184, 154, 94, 0.68);
+  margin: 16px 0;
+  padding: 10px 0 10px 14px;
+  color: #fff2d9 !important;
+  background: linear-gradient(90deg, rgba(184, 154, 94, 0.08), transparent);
+}
+
+.method-panel {
+  border-top: 1px solid rgba(226, 205, 166, 0.14);
+  margin-top: 18px;
+  padding-top: 14px;
+}
+
+.method-panel summary {
+  color: var(--gold);
+  cursor: pointer;
+  font-family: Arial, sans-serif;
+  font-size: 0.76rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.method-panel ul {
+  margin-top: 12px;
+}
+
+.result-panel--crisis .support-note {
+  border-left-color: rgba(255, 216, 216, 0.72);
+  background: linear-gradient(90deg, rgba(255, 216, 216, 0.08), transparent);
+}
+
+.integration-question {
+  border-top: 1px solid var(--line);
+  margin-top: 18px;
+  padding-top: 16px;
+  color: #fff2d9 !important;
+  font-size: 1.08rem;
+  font-style: italic;
+}
+
+.result-note {
+  color: var(--quiet) !important;
+  font-size: 0.86rem;
+}
+
+.use-boundary-note {
+  border-left: 1px solid rgba(184, 154, 94, 0.42);
+  padding-left: 12px;
+  color: var(--quiet) !important;
+  font-size: 0.9rem;
+}
+
+.contact-panel {
+  border-top: 1px solid var(--line);
+  margin-top: 24px;
+  padding-top: 20px;
+}
+
+.contact-panel--crisis {
+  border-top-color: rgba(255, 216, 216, 0.28);
+}
+
+.contact-panel h3 {
+  margin: 0 0 8px;
+  color: #fff7e8;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.contact-panel p {
+  margin: 0 0 12px;
+}
+
+.contact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.reading-actions {
+  display: flex;
+  margin: 12px 0 18px;
+}
+
+.copy-reading-button {
+  align-self: flex-start;
+}
+
+.page-share-block {
+  border-top: 1px solid rgba(226, 205, 166, 0.14);
+  padding-top: 14px;
+}
+
+.page-share-block p,
+.free-note-inline {
+  color: var(--quiet) !important;
+  font-size: 0.84rem;
+}
+
+.page-share-actions .secondary-button {
+  border-color: rgba(226, 205, 166, 0.28);
+  padding: 7px 12px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  background: rgba(16, 17, 22, 0.38);
+}
+
+.copy-message {
+  margin-top: 10px !important;
+  color: var(--gold) !important;
+  font-size: 0.86rem;
+}
+
+.ethical-note {
+  max-width: 760px;
+  margin-top: 34px;
+  color: var(--quiet);
+  font-size: 0.83rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 820px) {
+  .app-shell {
+    width: min(100% - 24px, 680px);
+    padding-top: 20px;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 8px 0 16px;
+  }
+
+  .daily-card {
+    grid-template-columns: 82px minmax(0, 1fr);
+    align-items: center;
+    justify-self: stretch;
+    width: 100%;
+    border-top: 1px solid rgba(226, 205, 166, 0.14);
+    border-bottom: 1px solid rgba(226, 205, 166, 0.14);
+    padding: 12px 0;
+  }
+
+  .daily-card img {
+    max-height: 126px;
+    padding: 6px;
+  }
+
+  .kicker {
+    margin-bottom: 8px;
+    font-size: 0.68rem;
+  }
+
+  h1 {
+    font-size: clamp(2.15rem, 12vw, 3.5rem);
+    line-height: 0.98;
+  }
+
+  .hero-phrase {
+    margin-top: 12px;
+    font-size: 1.2rem;
+    line-height: 1.25;
+  }
+
+  .microcopy {
+    max-width: 100%;
+    margin-top: 8px;
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+
+  .experience-grid,
+  .result-panel,
+  .question-guide {
+    grid-template-columns: 1fr;
+  }
+
+  .symbol-card {
+    width: min(190px, 100%);
+    min-height: 245px;
+    justify-self: center;
+  }
+
+  .symbol-card img {
+    max-height: 260px;
+  }
+
+}
+
+@media (max-width: 520px) {
+  h1 {
+
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const WORKER_URL = "https://tarot-marsella-docfertoro.pages.dev/api/tarot";
+const WORKER_HEALTH_URL = "https://tarot-marsella-docfertoro.pages.dev/api/health";
+
+// Formulario mínimo: pregunta libre + fecha opcional + 5 preguntas con botones (máx 3 alternativas).
 const AREAS = [
-  { value: "amor", label: "Amor" },
-  { value: "trabajo", label: "Trabajo" },
-  { value: "decision", label: "Decisión" },
-  { value: "familia", label: "Familia" },
-  { value: "creatividad", label: "Creatividad" },
-  { value: "animo", label: "Ánimo" },
-  { value: "crisis", label: "Crisis" },
-  { value: "otro", label: "Otro" }
+  { value: "amor", label: "Amor / vínculo" },
+  { value: "trabajo", label: "Trabajo / proyecto" },
+  { value: "decision", label: "Identidad / decisión" }
+];
+const EN_JUEGO = [
+  { value: "elegir", label: "Elegir" },
+  { value: "soltar", label: "Soltar" },
+  { value: "entender", label: "Entender" }
+];
+const EMOCIONES = [
+  { value: "angustia_miedo", label: "Angustia / miedo" },
+  { value: "tristeza_duelo", label: "Tristeza / duelo" },
+  { value: "rabia_frustracion", label: "Rabia / frustración" }
+];
+const TENSIONES = [
+  { value: "deseo_deber", label: "Deseo vs deber" },
+  { value: "apego_autonomia", label: "Apego vs autonomía" },
+  { value: "ideal_realidad", label: "Ideal vs realidad" }
+];
+const BUSQUEDAS = [
+  { value: "claridad", label: "Claridad" },
+  { value: "calma", label: "Calma" },
+  { value: "movimiento", label: "Movimiento" }
 ];
 
-const EMOTIONAL_STATES = ["confusión", "ansiedad", "duda", "cansancio", "esperanza", "rabia", "tristeza", "presión"];
-const READING_GOALS = ["claridad", "decisión", "comprensión", "cierre", "impulso", "calma"];
-const SITUATION_TYPES = [
-  "Estoy entre dos opciones",
-  "Algo terminó o está terminando",
-  "Quiero iniciar algo",
-  "No sé qué siento",
-  "Me cuesta soltar",
-  "Necesito ordenar una conversación"
-];
-const DEPTHS = [
-  { value: "breve", label: "Breve" },
-  { value: "equilibrada", label: "Equilibrada" },
-  { value: "profunda", label: "Profunda" }
-];
-const TONES = [
-  { value: "directo", label: "Directo" },
-  { value: "poetico", label: "Poético" },
-  { value: "contenedor", label: "Contenedor" }
-];
+// Texto asociado a la emoción dominante, sólo para detección local de riesgo/tono.
+const EMOCION_HINTS = {
+  angustia_miedo: "angustia miedo",
+  tristeza_duelo: "tristeza duelo",
+  rabia_frustracion: "rabia frustración"
+};
 
 const SYMBOLIC_CARDS = [
   {
     title: "La Papisa",
-    image: "./cartas/la-papisa.jpg",
+    image: "https://tarot-marsella-docfertoro.pages.dev/cartas/la-papisa.jpg",
     phrase: "El saber que madura en silencio."
   },
   {
     title: "La Estrella",
-    image: "./cartas/la-estrella.jpg",
+    image: "https://tarot-marsella-docfertoro.pages.dev/cartas/la-estrella.jpg",
     phrase: "Una imagen de calma para volver a mirar."
   },
   {
     title: "La Justicia",
-    image: "./cartas/la-justicia.jpg",
+    image: "https://tarot-marsella-docfertoro.pages.dev/cartas/la-justicia.jpg",
     phrase: "La pregunta busca medida y claridad."
   },
   {
     title: "El Ermitaño",
-    image: "./cartas/el-ermitano.jpg",
+    image: "https://tarot-marsella-docfertoro.pages.dev/cartas/el-ermitano.jpg",
     phrase: "Una luz pequeña alcanza para ordenar el camino inmediato."
   },
   {
     title: "La Templanza",
-    image: "./cartas/la-templanza.jpg",
+    image: "https://tarot-marsella-docfertoro.pages.dev/cartas/la-templanza.jpg",
     phrase: "Algo pide mezcla, pausa y proporción."
   }
 ];
@@ -109,14 +1046,12 @@ const PROHIBITED_PATTERNS = [
 
 const app = document.querySelector("#app");
 let state = {
-  alias: "",
   question: "",
   area: "decision",
-  emotionalState: "",
-  readingGoal: "claridad",
-  situationType: "",
-  depth: "equilibrada",
-  tone: "contenedor",
+  enJuego: "elegir",
+  emocion: "angustia_miedo",
+  tension: "deseo_deber",
+  busqueda: "claridad",
   birthDate: "",
   copyMessage: "",
   loading: false,
@@ -281,18 +1216,6 @@ function QuestionGuide() {
 }
 
 function QuestionForm() {
-  const aliasInput = el("input", {
-    id: "alias",
-    value: state.alias,
-    attributes: {
-      name: "alias",
-      type: "text",
-      maxlength: "60",
-      placeholder: "Puedes usar un alias",
-      autocomplete: "off"
-    }
-  });
-
   const textarea = el("textarea", {
     id: "question",
     value: state.question,
@@ -317,25 +1240,19 @@ function QuestionForm() {
 
   const children = [
     el("p", { className: "form-intro", text: "Prepara la lectura: escribe una pregunta que abra mirada, no una sentencia." }),
-    el("label", { className: "field-label", text: "Nombre o alias", attributes: { for: "alias" } }),
-    aliasInput,
     el("label", { className: "field-label", text: "Tu pregunta", attributes: { for: "question" } }),
     textarea,
-    el("p", { id: "question-help", className: "field-help", text: "Mejor una pregunta para mirar que una pregunta para adivinar. También puedes preguntar por tu forma de consultar: qué esperas, qué temes y qué límite quieres cuidar." }),
+    el("p", { id: "question-help", className: "field-help", text: "Mejor una pregunta para mirar que una pregunta para adivinar. Debajo de la pregunta suele haber una tensión: elige las opciones que mejor la describan." }),
     QuestionTools(),
-    el("fieldset", { className: "area-group" }, [
-      el("legend", { text: "Área" }),
-      renderChipOptions("area", AREAS, state.area)
-    ]),
+    renderChipField("area", "1. ¿Sobre qué área es tu pregunta?", AREAS, state.area),
+    renderChipField("enJuego", "2. ¿Qué está en juego?", EN_JUEGO, state.enJuego),
+    renderChipField("emocion", "3. ¿Qué emoción domina?", EMOCIONES, state.emocion),
+    renderChipField("tension", "4. ¿Cuál es la tensión principal?", TENSIONES, state.tension),
+    renderChipField("busqueda", "5. ¿Qué buscas?", BUSQUEDAS, state.busqueda),
     el("details", { className: "advanced-options" }, [
-      el("summary", { text: "Preparar la lectura" }),
+      el("summary", { text: "Edad o fecha de nacimiento — opcional" }),
       el("div", { className: "advanced-content" }, [
-        renderChipField("emotionalState", "¿Cómo estás frente a esto?", EMOTIONAL_STATES, state.emotionalState),
-        renderChipField("readingGoal", "¿Qué buscas de esta lectura?", READING_GOALS, state.readingGoal),
-        renderChipField("situationType", "¿Qué forma tiene la situación?", SITUATION_TYPES, state.situationType),
-        renderChipField("depth", "Profundidad", DEPTHS, state.depth),
-        renderChipField("tone", "Tono", TONES, state.tone),
-        el("label", { className: "field-label", text: "Fecha de nacimiento — opcional", attributes: { for: "birth-date" } }),
+        el("label", { className: "field-label", text: "Fecha de nacimiento", attributes: { for: "birth-date" } }),
         birthDateInput,
         el("p", {
           className: "field-help",
@@ -345,7 +1262,7 @@ function QuestionForm() {
     ]),
     el("p", {
       className: "privacy-note",
-      text: `Puedes usar un alias. ${PRIVACY_NOTE}`
+      text: PRIVACY_NOTE
     })
   ];
 
@@ -367,9 +1284,6 @@ function QuestionForm() {
 
   const form = el("form", { id: "question-form", className: "question-form" }, children);
   form.addEventListener("submit", handleSubmit);
-  aliasInput.addEventListener("input", (event) => {
-    state.alias = event.target.value;
-  });
   textarea.addEventListener("input", (event) => {
     state.question = event.target.value;
   });
@@ -444,11 +1358,10 @@ function handleOptionChange(event) {
   const { name, value } = event.target;
   const stateKeyByName = {
     area: "area",
-    emotionalState: "emotionalState",
-    readingGoal: "readingGoal",
-    situationType: "situationType",
-    depth: "depth",
-    tone: "tone"
+    enJuego: "enJuego",
+    emocion: "emocion",
+    tension: "tension",
+    busqueda: "busqueda"
   };
   const stateKey = stateKeyByName[name];
   if (stateKey) {
@@ -496,10 +1409,13 @@ function ReadingResult() {
   const result = state.result;
   const isCrisisResult = result.source === "seguridad-crisis";
   const card = result.card || {
-    nombre: result.symbolicCard,
+    nombre: result.symbolicCard || "Carta simbólica",
     numero: "",
-    imagen: result.image,
-    palabras: []
+    imagen: result.image || "",
+    detalles: [],
+    palabras: [],
+    significadoBase: "",
+    frase: ""
   };
   const sourceLabels = {
     "ia-real": "Modo: IA real vía Worker",
@@ -535,22 +1451,28 @@ function ReadingResult() {
     ]));
   }
 
+  const detalles = Array.isArray(card.detalles) && card.detalles.length ? card.detalles : card.palabras;
+
   const copyChildren = [
     el("p", { className: "result-mode", text: source }),
     result.fallbackNotice ? el("p", { className: "fallback-notice", text: result.fallbackNotice }) : null,
     el("h2", { text: result.title }),
     isCrisisResult ? null : el("p", { className: "symbol-name", text: card.numero ? `${card.numero} · ${card.nombre}` : card.nombre }),
-    isCrisisResult ? null : renderKeywords(card.palabras),
-    result.emotionalValidation ? el("p", { className: "reading-section", text: result.emotionalValidation }) : null,
-    result.narrativeTension ? el("p", { className: "reading-section reading-section--tension", text: result.narrativeTension }) : null,
-    result.symbolicTurn ? el("p", { className: "reading-section", text: result.symbolicTurn }) : null,
-    el("p", { text: result.briefReading }),
-    result.tarotPhrase ? el("p", { className: "tarot-phrase", text: result.tarotPhrase }) : null,
-    result.agencyReturn ? el("p", { className: "reading-section", text: result.agencyReturn }) : null,
-    el("p", { className: "soft-guidance", text: result.softGuidance }),
-    result.symbolicAct ? el("p", { className: "symbolic-act", text: result.symbolicAct }) : null,
-    el("p", { className: "integration-question", text: result.integrationQuestion }),
-    el("p", { className: "result-note", text: result.ethicalNote }),
+    isCrisisResult ? null : renderKeywords(detalles),
+    result.cardFrase ? el("p", { className: "tarot-phrase", text: result.cardFrase }) : null,
+    result.cardBase ? el("p", { className: "reading-section", text: result.cardBase }) : null,
+    readingBlock("La pregunta, ordenada", result.preguntaOrdenada),
+    readingBlock("Lo que parece pedir", result.pareceP),
+    readingBlock("Lo que podría haber debajo", result.oculta),
+    readingBlock("La tensión", result.tension, "reading-section--tension"),
+    result.lectura ? el("p", { text: result.lectura }) : null,
+    result.etapa ? el("p", { className: "reading-section reading-section--etapa", text: `Etapa vital: ${result.etapa}` }) : null,
+    readingBlock("Una resolución simbólica", result.resolucion),
+    result.orientacion ? el("p", { className: "soft-guidance", text: result.orientacion }) : null,
+    result.actoSimbolico ? el("p", { className: "symbolic-act", text: result.actoSimbolico }) : null,
+    result.preguntaFinal ? el("p", { className: "integration-question", text: result.preguntaFinal }) : null,
+    renderSources(result.fuentes),
+    el("p", { className: "result-note", text: result.disclaimer }),
     UseBoundaryNote(),
     MethodPanel(result),
     ContactPanel(result)
@@ -568,6 +1490,21 @@ function ReadingResult() {
     media,
     el("div", { className: "result-copy" }, copyChildren)
   ]);
+}
+
+function readingBlock(label, value, extraClass = "") {
+  const text = String(value || "").trim();
+  if (!text) return null;
+  return el("p", { className: `reading-section${extraClass ? ` ${extraClass}` : ""}` }, [
+    el("span", { className: "reading-label", text: `${label}: ` }),
+    document.createTextNode(text)
+  ]);
+}
+
+function renderSources(sources) {
+  const list = Array.isArray(sources) ? sources.filter(Boolean) : [];
+  if (!list.length) return null;
+  return el("p", { className: "sources-note", text: `Fuentes: ${list.join("; ")}.` });
 }
 
 function renderKeywords(words = []) {
@@ -764,19 +1701,24 @@ function getPublicPageUrl() {
 
 function buildReadingCopy(result) {
   const card = result.card || {};
+  const fuentes = Array.isArray(result.fuentes) && result.fuentes.length ? `Fuentes: ${result.fuentes.join("; ")}.` : "";
   return [
     result.title,
     card.nombre ? `Carta: ${card.numero ? `${card.numero} · ` : ""}${card.nombre}` : "",
-    result.emotionalValidation,
-    result.narrativeTension,
-    result.symbolicTurn,
-    result.briefReading,
-    result.tarotPhrase,
-    result.agencyReturn,
-    result.softGuidance,
-    result.symbolicAct,
-    result.integrationQuestion,
-    result.ethicalNote
+    result.cardFrase,
+    result.cardBase,
+    result.preguntaOrdenada ? `La pregunta, ordenada: ${result.preguntaOrdenada}` : "",
+    result.pareceP ? `Lo que parece pedir: ${result.pareceP}` : "",
+    result.oculta ? `Lo que podría haber debajo: ${result.oculta}` : "",
+    result.tension ? `La tensión: ${result.tension}` : "",
+    result.lectura,
+    result.etapa ? `Etapa vital: ${result.etapa}` : "",
+    result.resolucion ? `Una resolución simbólica: ${result.resolucion}` : "",
+    result.orientacion,
+    result.actoSimbolico,
+    result.preguntaFinal,
+    fuentes,
+    result.disclaimer
   ].filter(Boolean).join("\n\n");
 }
 
@@ -799,33 +1741,29 @@ function render() {
 async function handleSubmit(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
-  const alias = String(form.get("alias") || "").trim();
   const question = String(form.get("question") || "").trim();
-  const area = String(form.get("area") || "otro");
-  const emotionalState = String(form.get("emotionalState") || "").trim();
-  const readingGoal = String(form.get("readingGoal") || "claridad").trim();
-  const situationType = String(form.get("situationType") || "").trim();
-  const depth = String(form.get("depth") || "equilibrada").trim();
-  const tone = String(form.get("tone") || "contenedor").trim();
+  const area = String(form.get("area") || "decision");
+  const enJuego = String(form.get("enJuego") || "elegir");
+  const emocion = String(form.get("emocion") || "angustia_miedo");
+  const tension = String(form.get("tension") || "deseo_deber");
+  const busqueda = String(form.get("busqueda") || "claridad");
   const birthDate = String(form.get("birthDate") || "").trim();
   const questionHelp = getQuestionHelpMessage(question);
 
   if (questionHelp) {
-    state = { ...state, alias, question, area, emotionalState, readingGoal, situationType, depth, tone, birthDate, error: questionHelp };
+    state = { ...state, question, area, enJuego, emocion, tension, busqueda, birthDate, error: questionHelp };
     render();
     return;
   }
 
   state = {
     ...state,
-    alias,
     question,
     area,
-    emotionalState,
-    readingGoal,
-    situationType,
-    depth,
-    tone,
+    enJuego,
+    emocion,
+    tension,
+    busqueda,
     birthDate,
     copyMessage: "",
     loading: true,
@@ -834,36 +1772,32 @@ async function handleSubmit(event) {
   };
   render();
 
-  const result = await requestTarotReading({ alias, question, area, emotionalState, readingGoal, situationType, depth, tone, birthDate });
+  const result = await requestTarotReading({ question, area, enJuego, emocion, tension, busqueda, birthDate });
   state = { ...state, loading: false, result, readingCount: state.readingCount + 1 };
   render();
 }
-
-export async function requestTarotReading(input) {
+async function requestTarotReading(input) {
   const normalizedInput = normalizeInput(input);
   const riskText = [
     normalizedInput.question,
     normalizedInput.area,
-    normalizedInput.emotionalState,
-    normalizedInput.situationType
+    EMOCION_HINTS[normalizedInput.emocion] || ""
   ].join(" ");
-  const risk = hasBasicRiskLanguage(riskText) || normalizedInput.area === "crisis";
+  const risk = hasBasicRiskLanguage(riskText);
   const urgent = hasUrgencyLanguage(riskText);
   const care = hasHighDistressLanguage(riskText);
   const predictive = hasPredictiveLanguage(riskText);
   const card = pickSymbolicCard();
   const payload = {
-    alias: normalizedInput.alias,
     pregunta: normalizedInput.question,
     area: normalizedInput.area,
-    estado_emocional: normalizedInput.emotionalState,
-    busqueda: normalizedInput.readingGoal,
-    tipo_situacion: normalizedInput.situationType,
-    profundidad: normalizedInput.depth,
-    tono: normalizedInput.tone,
+    en_juego: normalizedInput.enJuego,
+    emocion_dominante: normalizedInput.emocion,
+    tension_principal: normalizedInput.tension,
+    busqueda: normalizedInput.busqueda,
     contexto_vital: normalizedInput.lifeStageContext,
     parametros: {
-      version: "v2-personalizacion-minima",
+      version: "v3-carta-pregunta-tension-orden",
       enfoque: "simbolico-no-predictivo"
     }
   };
@@ -933,28 +1867,9 @@ async function postWorkerOnce(url, body) {
   return response.json();
 }
 
-function generateConnectionFallback(input) {
-  const card = input.card || pickSymbolicCard();
-  const status = input.error?.status || 0;
-  const isRateLimit = status === 429;
-  const title = isRateLimit
-    ? "Hiciste varias lecturas muy seguidas"
-    : "No pudimos conectar con la lectura completa";
-  const briefReading = isRateLimit
-    ? "El servicio recibió demasiadas solicitudes en poco tiempo. Espera alrededor de un minuto y vuelve a intentarlo."
-    : "Puede ser una conexión temporalmente incompleta o una vista local sin acceso al servicio de lectura. Reintenta en unos segundos desde la página publicada.";
-  const fallbackNotice = isRateLimit
-    ? "Límite temporal de solicitudes. No se generó una lectura local."
-    : "No se generó una lectura local para no confundir una falla de conexión con una interpretación simbólica.";
-  const diagnostic = status
-    ? `Estado técnico: Worker HTTP ${status}.`
-    : `Estado técnico: sin respuesta HTTP del Worker (${input.error?.name || "error de red"}).`;
-  console.info("[tarot] connection fallback", diagnostic, input.error);
-
+function technicalFallback({ title, card, lectura, orientacion, preguntaFinal, fallbackNotice, fallbackDetail }) {
   return {
     title,
-    symbolicCard: `Carta simbólica: ${card.title}`,
-    image: card.image,
     card: normalizeCard({
       id: slugify(card.title),
       nombre: card.title,
@@ -962,108 +1877,101 @@ function generateConnectionFallback(input) {
       imagen: card.image,
       palabras: ["conexión", "pausa", "reintento"]
     }),
-    emotionalValidation: isRateLimit
-      ? "Tu pregunta quedó escrita, pero el sistema necesita una pausa breve para evitar abusos y mantener el servicio gratuito."
-      : "Tu pregunta quedó escrita, pero esta vez la página no logró comunicarse con el Worker que construye la lectura completa.",
-    narrativeTension: "Prefiero no disfrazar una falla técnica como si fuera una lectura simbólica real.",
-    symbolicTurn: `${card.title} queda sólo como imagen de pausa mientras recuperamos la conexión.`,
-    briefReading,
-    softGuidance: "No se guardó tu pregunta. Puedes volver a enviarla cuando la conexión esté disponible.",
-    agencyReturn: "La lectura completa debe venir del Worker; este mensaje sólo protege la claridad del proceso.",
-    symbolicAct: "",
-    integrationQuestion: "¿Puedes reintentar la lectura desde la página abierta en el navegador?",
-    ethicalNote: ETHICAL_NOTE,
+    cardBase: "",
+    cardFrase: "",
+    preguntaOrdenada: "",
+    pareceP: "",
+    oculta: "",
+    tension: "",
+    lectura,
+    etapa: "",
+    resolucion: "",
+    orientacion,
+    actoSimbolico: "",
+    preguntaFinal,
+    fuentes: [],
+    disclaimer: ETHICAL_NOTE,
     fallbackNotice,
-    fallbackDetail: diagnostic,
+    fallbackDetail: fallbackDetail || "",
     source: "connection-error"
   };
+}
+
+function generateConnectionFallback(input) {
+  const card = input.card || pickSymbolicCard();
+  const status = input.error?.status || 0;
+  const isRateLimit = status === 429;
+  const diagnostic = status
+    ? `Estado técnico: Worker HTTP ${status}.`
+    : `Estado técnico: sin respuesta HTTP del Worker (${input.error?.name || "error de red"}).`;
+  console.info("[tarot] connection fallback", diagnostic, input.error);
+
+  return technicalFallback({
+    title: isRateLimit ? "Hiciste varias lecturas muy seguidas" : "No pudimos conectar con la lectura completa",
+    card,
+    lectura: isRateLimit
+      ? "El servicio recibió demasiadas solicitudes en poco tiempo. Espera alrededor de un minuto y vuelve a intentarlo. Prefiero no disfrazar una falla técnica como una lectura simbólica real."
+      : "Puede ser una conexión temporalmente incompleta o una vista local sin acceso al servicio de lectura. Reintenta en unos segundos desde la página publicada. Prefiero no disfrazar una falla técnica como una lectura simbólica real.",
+    orientacion: "No se guardó tu pregunta. Puedes volver a enviarla cuando la conexión esté disponible.",
+    preguntaFinal: "¿Puedes reintentar la lectura desde la página abierta en el navegador?",
+    fallbackNotice: isRateLimit
+      ? "Límite temporal de solicitudes. No se generó una lectura local."
+      : "No se generó una lectura local para no confundir una falla de conexión con una interpretación simbólica.",
+    fallbackDetail: diagnostic
+  });
 }
 
 function generateWorkerFormatFallback(input) {
   const card = input.card || pickSymbolicCard();
   const message = String(input.error?.message || "La respuesta no pudo normalizarse.").slice(0, 160);
-  return {
+  return technicalFallback({
     title: "El Worker respondió, pero la página no pudo mostrar la lectura",
-    symbolicCard: `Carta simbólica: ${card.title}`,
-    image: card.image,
-    card: normalizeCard({
-      id: slugify(card.title),
-      nombre: card.title,
-      numero: "",
-      imagen: card.image,
-      palabras: ["formato", "revisión", "reintento"]
-    }),
-    emotionalValidation: "La conexión con el Worker sí ocurrió, pero la página encontró un problema al preparar la lectura para mostrarla.",
-    narrativeTension: "Prefiero mostrar este aviso antes que deformar una respuesta simbólica o presentarla incompleta.",
-    symbolicTurn: `${card.title} queda como imagen de revisión: la lectura necesita volver a generarse con un formato más claro.`,
-    briefReading: "Reintenta la lectura. Si vuelve a ocurrir, el problema está en el formato de respuesta o en un filtro local demasiado estricto, no en la conexión.",
-    softGuidance: "No se guardó tu pregunta. Puedes volver a enviarla.",
-    agencyReturn: "Este aviso protege la claridad del proceso: una lectura dudosa no debe hacerse pasar por respuesta final.",
-    symbolicAct: "",
-    integrationQuestion: "¿Puedes reintentar la lectura para pedir una respuesta estructurada nuevamente?",
-    ethicalNote: ETHICAL_NOTE,
-    fallbackNotice: `Diagnóstico: Worker respondió, error local de formato. ${message}`,
-    source: "connection-error"
-  };
+    card,
+    lectura: "La conexión con el Worker sí ocurrió, pero la página encontró un problema al preparar la lectura. Prefiero mostrar este aviso antes que deformar una respuesta simbólica o presentarla incompleta.",
+    orientacion: "Reintenta la lectura. Si vuelve a ocurrir, el problema está en el formato de respuesta o en un filtro local demasiado estricto, no en la conexión. No se guardó tu pregunta.",
+    preguntaFinal: "¿Puedes reintentar la lectura para pedir una respuesta estructurada nuevamente?",
+    fallbackNotice: `Diagnóstico: Worker respondió, error local de formato. ${message}`
+  });
 }
-
-export function generateFallbackReading(input) {
+function generateFallbackReading(input) {
   const card = input.card || pickSymbolicCard();
-  const alias = input.alias ? `${input.alias}, ` : "";
-  const emotion = input.emotionalState || "no indicado";
-  const goal = input.readingGoal || "claridad";
-  const situation = input.situationType || "la situación";
   const area = areaLabel(input.area).toLowerCase();
+  const enJuego = labelOf(EN_JUEGO, input.enJuego) || "mirar la situación";
+  const emotion = labelOf(EMOCIONES, input.emocion) || "una emoción";
+  const tensionSel = labelOf(TENSIONES, input.tension) || "deseo y deber";
+  const search = labelOf(BUSQUEDAS, input.busqueda) || "claridad";
   const questionSummary = summarizeQuestionForLocalFallback(input.question);
-  const anchors = extractQuestionAnchors(input.question);
   const sensitiveThemes = detectSensitiveThemes(input.question);
-  const anchorText = anchors.length
-    ? `En tu relato aparecen puntos concretos —${anchors.join(", ")}— que conviene mirar sin reducirlos a una respuesta rápida.`
-    : `En tu relato aparece una escena que necesita más precisión que una respuesta rápida.`;
   const careText = sensitiveThemes.length
-    ? "Como también aparecen señales de cuerpo, angustia, recaída o exposición a contextos difíciles, esta lectura no reemplaza apoyo profesional ni una conversación humana segura."
+    ? " Como también aparecen señales de cuerpo, angustia o recaída, esta lectura no reemplaza apoyo profesional ni una conversación humana segura."
     : "";
 
-  if (input.urgent) {
+  if (input.urgent || input.risk) {
     const crisisCard = normalizeCard({
       id: "la-templanza",
       nombre: "La Templanza",
       numero: "XIIII",
-      imagen: "./cartas/la-templanza.jpg",
+      imagen: "https://tarot-marsella-docfertoro.pages.dev/cartas/la-templanza.jpg",
       palabras: ["pausa", "cuidado", "apoyo"]
     });
     return {
       title: "Pausa y apoyo cercano",
-      symbolicCard: "Carta simbólica: La Templanza",
-      image: crisisCard.imagen,
       card: crisisCard,
-      briefReading: "Esta página no interpreta urgencias ni situaciones de riesgo como oráculo.",
-      softGuidance: "Lo importante ahora es no quedar a solas con la carga de la pregunta.",
+      cardBase: "",
+      cardFrase: "",
+      preguntaOrdenada: "",
+      pareceP: "",
+      oculta: "",
+      tension: "",
+      lectura: "Cuando una pregunta toca crisis o sufrimiento intenso, esta página no la interpreta como oráculo: conviene bajar el tono simbólico y priorizar acompañamiento real.",
+      etapa: "",
+      resolucion: "",
+      orientacion: "Lo importante ahora es no quedar a solas con la carga de la pregunta. Puedes ordenar una frase simple sobre lo que necesitas contarle a alguien de confianza.",
+      actoSimbolico: "",
+      preguntaFinal: "¿Quién puede acompañarte en este momento concreto?",
+      fuentes: [],
       supportNote: SUPPORT_NOTE,
-      integrationQuestion: "¿Quién puede acompañarte en este momento concreto?",
-      ethicalNote: ETHICAL_NOTE,
-      source: "fallback-local"
-    };
-  }
-
-  if (input.risk) {
-    const riskCard = normalizeCard({
-      id: "la-templanza",
-      nombre: "La Templanza",
-      numero: "XIIII",
-      imagen: "./cartas/la-templanza.jpg",
-      palabras: ["pausa", "cuidado", "apoyo"]
-    });
-    return {
-      title: "Una pregunta para mirar con cuidado",
-      symbolicCard: "Carta simbólica: La Templanza",
-      image: riskCard.imagen,
-      card: riskCard,
-      briefReading: "Cuando una pregunta toca crisis o sufrimiento intenso, conviene bajar el tono simbólico y priorizar acompañamiento real.",
-      softGuidance: "Puedes usar esta pausa para ordenar una frase simple sobre lo que necesitas contarle a alguien de confianza.",
-      supportNote: SUPPORT_NOTE,
-      integrationQuestion: "¿Qué sería útil decirle a una persona segura, sin adornarlo?",
-      ethicalNote: ETHICAL_NOTE,
+      disclaimer: ETHICAL_NOTE,
       source: "fallback-local"
     };
   }
@@ -1071,21 +1979,22 @@ export function generateFallbackReading(input) {
   if (input.care) {
     return {
       title: "Una pausa con cuidado",
-      symbolicCard: `Carta simbólica: ${card.title}`,
-      image: card.image,
-      card: normalizeCard({
-        id: slugify(card.title),
-        nombre: card.title,
-        numero: "",
-        imagen: card.image,
-        palabras: ["pausa", "cuidado", "apoyo"]
-      }),
-      briefReading: "La pregunta trae angustia intensa, pero no aparece una señal explícita de riesgo inmediato. Por eso la lectura baja el tono: la carta puede servir como pausa, no como sostén principal.",
-      softGuidance: "Si esta carga se vuelve difícil de sostener, puede ayudarte hablar con una persona segura o con apoyo profesional. No tienes que ordenar todo a solas para que la pregunta sea válida.",
+      card: normalizeCard({ id: slugify(card.title), nombre: card.title, numero: "", imagen: card.image, palabras: ["pausa", "cuidado", "apoyo"] }),
+      cardBase: "",
+      cardFrase: card.phrase || "",
+      preguntaOrdenada: "",
+      pareceP: "",
+      oculta: "",
+      tension: "",
+      lectura: "La pregunta trae angustia intensa, pero no aparece una señal explícita de riesgo inmediato. Por eso la lectura baja el tono: la carta puede servir como pausa, no como sostén principal.",
+      etapa: "",
+      resolucion: "Lo que vuelve a tus manos ahora puede ser pequeño: nombrar lo que sientes, bajar una exigencia inmediata y elegir una persona o espacio donde puedas decirlo con claridad.",
+      orientacion: "Si esta carga se vuelve difícil de sostener, puede ayudarte hablar con una persona segura o con apoyo profesional. No tienes que ordenar todo a solas para que la pregunta sea válida.",
+      actoSimbolico: "",
+      preguntaFinal: "¿Qué apoyo humano concreto haría esta hora un poco más acompañada?",
+      fuentes: [],
       supportNote: CARE_NOTE,
-      agencyReturn: "Lo que vuelve a tus manos ahora puede ser pequeño: nombrar lo que sientes, bajar una exigencia inmediata y elegir una persona o espacio donde puedas decirlo con claridad.",
-      integrationQuestion: "¿Qué apoyo humano concreto haría esta hora un poco más acompañada?",
-      ethicalNote: ETHICAL_NOTE,
+      disclaimer: ETHICAL_NOTE,
       source: "fallback-local",
       alert: "cuidado"
     };
@@ -1094,21 +2003,22 @@ export function generateFallbackReading(input) {
   if (input.predictive) {
     return {
       title: "Reformular sin predecir",
-      symbolicCard: `Carta simbólica: ${card.title}`,
-      image: card.image,
-      card: normalizeCard({
-        id: slugify(card.title),
-        nombre: card.title,
-        numero: "",
-        imagen: card.image,
-        palabras: ["pregunta", "limite", "agencia"]
-      }),
-      briefReading: "La pregunta parece pedir una certeza sobre el futuro o sobre otra persona. Esta app no predice ni habla por alguien ausente.",
-      softGuidance: "Puedes transformar la pregunta en algo más útil: qué señales sí puedes observar, qué límite necesitas cuidar y qué decisión pequeña depende de ti ahora.",
+      card: normalizeCard({ id: slugify(card.title), nombre: card.title, numero: "", imagen: card.image, palabras: ["pregunta", "límite", "agencia"] }),
+      cardBase: "",
+      cardFrase: card.phrase || "",
+      preguntaOrdenada: "La pregunta pide una certeza que esta lectura no puede entregar; puede mirarse mejor desde lo observable, tus límites y tu margen de acción.",
+      pareceP: "Pide una certeza sobre el futuro o sobre la voluntad de otra persona.",
+      oculta: "",
+      tension: "",
+      lectura: "La pregunta parece pedir una certeza sobre el futuro o sobre otra persona. Esta app no predice ni habla por alguien ausente.",
+      etapa: "",
+      resolucion: "La carta no cierra el resultado: devuelve la atención a tu margen de acción.",
+      orientacion: "Puedes transformar la pregunta en algo más útil: qué señales sí puedes observar, qué límite necesitas cuidar y qué decisión pequeña depende de ti ahora.",
+      actoSimbolico: "",
+      preguntaFinal: "¿Qué parte de esta situación puedes observar sin convertirla en una predicción?",
+      fuentes: [],
       supportNote: PREDICTIVE_NOTE,
-      agencyReturn: "La carta no cierra el resultado: devuelve la atención a tu margen de acción.",
-      integrationQuestion: "¿Qué parte de esta situación puedes observar sin convertirla en una predicción?",
-      ethicalNote: ETHICAL_NOTE,
+      disclaimer: ETHICAL_NOTE,
       source: "fallback-local",
       alert: "predictiva"
     };
@@ -1116,138 +2026,120 @@ export function generateFallbackReading(input) {
 
   return {
     title: `Pausa simbólica con ${card.title}`,
-    symbolicCard: `Carta simbólica: ${card.title}`,
-    image: card.image,
-    card: normalizeCard({
-      id: slugify(card.title),
-      nombre: card.title,
-      numero: "",
-      imagen: card.image,
-      palabras: ["imagen", "pregunta", "claridad"]
-    }),
-    reframedQuestion: `${alias}tu pregunta sobre ${area} puede mirarse desde ${emotion}, buscando ${goal}.`,
-    consultantScene: `${alias}${questionSummary}`,
-    emotionalValidation: `Tiene sentido que aparezca ${emotion}: no estás preguntando por una curiosidad liviana, sino por una escena donde cuerpo, deseo de avanzar, temor y cuidado necesitan ordenarse.`,
-    narrativeTension: `La tensión no parece ser simplemente "${situation}". Parece estar entre volver a exponerte a una vida que deseas y reconocer que ciertos contextos también pueden reactivar lo que te desordena.`,
-    symbolicTurn: `${card.title} no decide si quedarte o volver atrás. Propone mirar el ritmo: qué parte de la decisión necesita mezcla, pausa, compañía y límites antes de exigir una conclusión.`,
-    briefReading: `${anchorText} ${card.phrase} En este modo local, la carta sólo ofrece una imagen breve: no resuelve la tensión, pero ayuda a separar esperanza, miedo, recaída, meta y cuidado concreto. ${careText}`,
-    softGuidance: "Si la pregunta toca salud, consumo, angustia o recaídas, lo más lúcido no es decidir solo: es pensar la decisión con alguien confiable o profesional que pueda acompañar el proceso.",
-    agencyReturn: "La carta te devuelve una posibilidad pequeña: no elegir entre esperanza y protección como enemigos, sino preguntar qué condiciones reales harían más habitable el lugar donde quieres construir tu vida.",
-    symbolicAct: "Escribe dos columnas: lo que Santiago promete y lo que Santiago activa. Luego agrega una tercera: qué apoyo concreto necesitarías para no quedar solo frente a eso.",
-    integrationQuestion: "¿Qué condición concreta tendría que existir para que avanzar no signifique volver a exponerte sin cuidado?",
-    ethicalNote: ETHICAL_NOTE,
+    card: normalizeCard({ id: slugify(card.title), nombre: card.title, numero: "", imagen: card.image, palabras: ["imagen", "pregunta", "claridad"] }),
+    cardBase: `${card.title} ofrece una imagen breve para mirar la pregunta desde otro ángulo.`,
+    cardFrase: card.phrase || "",
+    preguntaOrdenada: `Tu pregunta sobre ${area} puede ordenarse como una tensión entre ${tensionSel}, buscando ${search}.`,
+    pareceP: `Parece pedir ${enJuego}, buscando ${search}.`,
+    oculta: `Quizás debajo conviven ${emotion} y el temor a decidir sin estar seguro: el deseo de avanzar podría convivir con el miedo a perder algo.`,
+    tension: `La tensión parece estar entre ${tensionSel}: dos fuerzas legítimas que hoy tiran en direcciones distintas.`,
+    lectura: `${questionSummary} En este modo local, la carta sólo ofrece una imagen breve: no resuelve la tensión, pero ayuda a separar deseo, miedo, cansancio y una dirección posible.${careText}`,
+    etapa: input.lifeStageContext?.etapa || "",
+    resolucion: "La carta te devuelve una posibilidad pequeña: no elegir entre dos fuerzas como enemigas, sino preguntar qué condición concreta haría más habitable el siguiente paso.",
+    orientacion: "Si la pregunta toca salud, consumo, angustia o recaídas, lo más lúcido no es decidir a solas: puede ayudarte pensarlo con alguien confiable o profesional. Nombra una sola cosa que hoy dependa de ti.",
+    actoSimbolico: "Escribe dos columnas: qué buscabas con esta pregunta y qué temes perder. Quédate con una frase de cada columna.",
+    preguntaFinal: "¿Qué condición concreta tendría que existir para que avanzar no signifique dejar de cuidarte?",
+    fuentes: ["Observación directa de la imagen del Tarot de Marsella", "Interpretación estructural de la app: eje, tensión, orden y agencia"],
+    disclaimer: ETHICAL_NOTE,
     fallbackNotice: "No hubo conexión con la IA del Worker. Esta es una lectura local básica y no reemplaza una lectura completa.",
     source: "fallback-local"
   };
 }
 
+function labelOf(list, value) {
+  const found = Array.isArray(list) ? list.find((option) => option.value === value) : null;
+  return found ? found.label.toLowerCase() : "";
+}
+
 function normalizeWorkerReading(data, input, card) {
   const isStructured = data && (
-    "lectura" in data ||
-    "orientacion" in data ||
-    "pregunta_integracion" in data ||
-    "imagen_simbolica" in data ||
+    "lectura_de_la_carta_en_esta_pregunta" in data ||
+    "tension_psicodinamica" in data ||
+    "pregunta_ordenada" in data ||
+    "resolucion_simbolica" in data ||
     "modo" in data
   );
 
-  if (isStructured) {
-    const title = String(data?.titulo || "Lectura simbólica").trim();
-    const responseCard = normalizeCard(data?.carta, {
-      id: slugify(card.title),
-      nombre: card.title,
-      numero: "",
-      imagen: card.image,
-      palabras: ["imagen", "pregunta", "claridad"]
-    });
-    const symbolicImage = String(data?.imagen_simbolica || responseCard.nombre || `Carta simbólica: ${card.title}`).trim();
-    const reading = prepareWorkerText(String(data?.lectura || "").trim());
-    const guidance = prepareWorkerText(String(data?.orientacion || "Toma esta lectura como una imagen para pensar, no como una instrucción.").trim());
-    const integration = prepareWorkerText(String(data?.pregunta_integracion || "¿Qué cambia en tu pregunta después de mirarla con esta imagen?").trim());
-    const mode = String(data?.modo || "ia-real");
-    const alert = data?.alerta === "crisis" ? "crisis" : null;
-    const safetyNote = supportNoteForAlert(data?.alerta);
+  if (!isStructured) {
+    throw new Error("El Worker no devolvió una lectura estructurada usable.");
+  }
 
-    if (alert === "crisis") {
-      return {
-        title: title || "Primero tu seguridad",
-        reframedQuestion: "",
-        consultantScene: "",
-        emotionalValidation: "",
-        narrativeTension: "",
-        symbolicTurn: "",
-        symbolicCard: "",
-        image: "",
-        card: null,
-        briefReading: reading || "Lo que escribiste suena a un momento de riesgo o dolor muy intenso. Esta pagina no va a convertirlo en lectura de cartas.",
-        tarotPhrase: "",
-        agencyReturn: "",
-        softGuidance: guidance || SUPPORT_NOTE,
-        symbolicAct: "",
-        supportNote: SUPPORT_NOTE,
-        integrationQuestion: integration || "¿Puedes contactar ahora mismo a una persona o servicio de urgencia para no quedarte a solas con esto?",
-        ethicalNote: String(data?.disclaimer || data?.notaEtica || data?.ethicalNote || ETHICAL_NOTE),
-        source: "seguridad-crisis",
-        alert: "crisis",
-        area: input.area
-      };
-    }
+  const title = String(data?.titulo || "Lectura simbólica").trim();
+  const mode = String(data?.modo || "ia-real");
+  const safetyNote = supportNoteForAlert(data?.alerta);
 
+  if (data?.alerta === "crisis" || mode === "seguridad-crisis") {
     return {
-      title,
-      reframedQuestion: String(data?.pregunta_reformulada || "").trim(),
-      consultantScene: prepareOptionalWorkerText(String(data?.escena_consultante || data?.sintesis || "").trim()),
-      emotionalValidation: prepareOptionalWorkerText(String(data?.validacion_emocional || "").trim()),
-      narrativeTension: prepareOptionalWorkerText(String(data?.tension_narrativa || data?.tension_o_contradiccion || "").trim()),
-      symbolicTurn: prepareOptionalWorkerText(String(data?.giro_simbolico || data?.imagen_simbolica || "").trim()),
-      symbolicCard: responseCard.nombre || symbolicImage,
-      image: responseCard.imagen || String(data?.imagen || data?.image || ""),
-      card: responseCard,
-      briefReading: reading,
-      tarotPhrase: String(data?.frase_tarologica || "").trim(),
-      agencyReturn: prepareOptionalWorkerText(String(data?.devolucion_agencia || "").trim()),
-      softGuidance: guidance,
-      symbolicAct: prepareOptionalWorkerText(String(data?.acto_simbolico_opcional || "").trim()),
-      supportNote: safetyNote,
-      integrationQuestion: integration,
-      ethicalNote: String(data?.disclaimer || data?.notaEtica || data?.ethicalNote || ETHICAL_NOTE),
-      source: mode,
-      alert: data?.alerta || null,
+      title: title || "Primero tu seguridad",
+      card: null,
+      cardBase: "",
+      cardFrase: "",
+      preguntaOrdenada: "",
+      pareceP: "",
+      oculta: "",
+      tension: "",
+      lectura: prepareWorkerText(String(data?.lectura_de_la_carta_en_esta_pregunta || "").trim()),
+      etapa: "",
+      resolucion: "",
+      orientacion: prepareWorkerText(String(data?.orientacion_practica || "").trim()) || SUPPORT_NOTE,
+      actoSimbolico: "",
+      preguntaFinal: String(data?.pregunta_final || "").trim() || "¿Puedes contactar ahora mismo a una persona o servicio de urgencia para no quedarte a solas con esto?",
+      fuentes: [],
+      supportNote: SUPPORT_NOTE,
+      disclaimer: String(data?.disclaimer || ETHICAL_NOTE),
+      source: "seguridad-crisis",
+      alert: "crisis",
       area: input.area
     };
   }
 
-  const text = prepareWorkerText(String(data?.text || data?.reading || "").trim());
-  const title = String(data?.titulo || data?.title || "Lectura simbólica").trim();
-  const guidance = String(data?.orientacion || data?.softGuidance || "").trim();
-  const integration = String(data?.preguntaIntegracion || data?.integrationQuestion || "").trim();
-
-  if (!text) {
-    throw new Error("El Worker no devolvió una lectura usable.");
-  }
+  const responseCard = normalizeResultCard(data?.carta, card);
 
   return {
     title,
-    symbolicCard: String(data?.carta || data?.symbolicCard || `Carta simbólica: ${card.title}`),
-    image: String(data?.imagen || data?.image || card.image),
-    card: normalizeCard(data?.carta, {
-      id: slugify(card.title),
-      nombre: String(data?.carta || data?.symbolicCard || card.title),
-      numero: "",
-      imagen: String(data?.imagen || data?.image || card.image),
-      palabras: ["imagen", "pregunta", "claridad"]
-    }),
-    briefReading: text,
-    consultantScene: "",
-    emotionalValidation: "",
-    narrativeTension: "",
-    symbolicTurn: "",
-    agencyReturn: "",
-    softGuidance: guidance || "Toma esta lectura como una imagen para pensar, no como una instrucción.",
-    symbolicAct: "",
-    integrationQuestion: integration || "¿Qué cambia en tu pregunta después de mirarla con esta imagen?",
-    ethicalNote: String(data?.notaEtica || data?.ethicalNote || ETHICAL_NOTE),
-    source: "ia-real",
+    card: responseCard,
+    cardBase: prepareOptionalWorkerText(String(data?.carta?.significado_base || "").trim()),
+    cardFrase: String(data?.carta?.frase_simbolica || "").trim(),
+    preguntaOrdenada: prepareOptionalWorkerText(String(data?.pregunta_ordenada || "").trim()),
+    pareceP: prepareOptionalWorkerText(String(data?.lo_que_la_pregunta_parece_pedir || "").trim()),
+    oculta: prepareOptionalWorkerText(String(data?.lo_que_la_pregunta_podria_ocultar || "").trim()),
+    tension: prepareOptionalWorkerText(String(data?.tension_psicodinamica || "").trim()),
+    lectura: prepareWorkerText(String(data?.lectura_de_la_carta_en_esta_pregunta || "").trim()),
+    etapa: String(data?.etapa_vital || "").trim(),
+    resolucion: prepareOptionalWorkerText(String(data?.resolucion_simbolica || "").trim()),
+    orientacion: prepareWorkerText(String(data?.orientacion_practica || "Toma esta lectura como una imagen para pensar, no como una instrucción.").trim()),
+    actoSimbolico: prepareOptionalWorkerText(String(data?.acto_simbolico_opcional || "").trim()),
+    preguntaFinal: String(data?.pregunta_final || "¿Qué cambia en tu pregunta después de mirarla con esta imagen?").trim(),
+    fuentes: Array.isArray(data?.fuentes_usadas) ? data.fuentes_usadas.filter(Boolean).map((source) => String(source).trim()) : [],
+    supportNote: safetyNote,
+    disclaimer: String(data?.disclaimer || ETHICAL_NOTE),
+    source: mode,
+    alert: data?.alerta || null,
     area: input.area
+  };
+}
+
+function normalizeResultCard(value, fallbackCard) {
+  const base = normalizeCard(value, {
+    id: slugify(fallbackCard.title),
+    nombre: fallbackCard.title,
+    numero: "",
+    imagen: fallbackCard.image,
+    palabras: []
+  });
+  const detalles = Array.isArray(value?.detalles_visuales_relevantes)
+    ? value.detalles_visuales_relevantes.map((detail) => String(detail).trim()).filter(Boolean)
+    : [];
+  const palabrasClave = Array.isArray(value?.palabras_clave)
+    ? value.palabras_clave.map((word) => String(word).trim()).filter(Boolean)
+    : base.palabras;
+  return {
+    nombre: base.nombre,
+    numero: base.numero,
+    tipo: base.tipo,
+    imagen: base.imagen,
+    detalles,
+    palabras: palabrasClave
   };
 }
 
@@ -1357,14 +2249,12 @@ function dedupeRepeatedSentences(value) {
 function normalizeInput(input) {
   const birthDate = String(input?.birthDate || "").trim();
   return {
-    alias: String(input?.alias || "").trim().slice(0, 60),
     question: String(input?.question || "").trim().slice(0, 600),
-    area: AREAS.some((area) => area.value === input?.area) ? input.area : "otro",
-    emotionalState: EMOTIONAL_STATES.includes(input?.emotionalState) ? input.emotionalState : "",
-    readingGoal: READING_GOALS.includes(input?.readingGoal) ? input.readingGoal : "claridad",
-    situationType: SITUATION_TYPES.includes(input?.situationType) ? input.situationType : "",
-    depth: DEPTHS.some((depth) => depth.value === input?.depth) ? input.depth : "equilibrada",
-    tone: TONES.some((tone) => tone.value === input?.tone) ? input.tone : "contenedor",
+    area: AREAS.some((area) => area.value === input?.area) ? input.area : "decision",
+    enJuego: EN_JUEGO.some((option) => option.value === input?.enJuego) ? input.enJuego : "elegir",
+    emocion: EMOCIONES.some((option) => option.value === input?.emocion) ? input.emocion : "angustia_miedo",
+    tension: TENSIONES.some((option) => option.value === input?.tension) ? input.tension : "deseo_deber",
+    busqueda: BUSQUEDAS.some((option) => option.value === input?.busqueda) ? input.busqueda : "claridad",
     lifeStageContext: calculateLifeStageContext(birthDate)
   };
 }
@@ -1466,7 +2356,7 @@ function normalizeCard(value, fallback = {}) {
     nombre: String(source.nombre || source.name || fallback.nombre || fallback.name || "Carta simbólica").trim(),
     numero: String(source.numero || source.number || fallback.numero || fallback.number || "").trim(),
     tipo: String(source.tipo || source.type || fallback.tipo || fallback.type || "mayor").trim(),
-    imagen: String(source.imagen || source.image || fallback.imagen || fallback.image || "").trim(),
+    imagen: String(source.imagen || source.image || fallback.imagen || fallback.image || "").trim().replace(/^\.\/cartas\//, "https://tarot-marsella-docfertoro.pages.dev/cartas/"),
     palabras: Array.isArray(source.palabras || source.words)
       ? (source.palabras || source.words).map((word) => String(word).trim()).filter(Boolean)
       : Array.isArray(fallback.palabras || fallback.words)
@@ -1549,4 +2439,7 @@ function registerServiceWorker() {
 }
 
 render();
-registerServiceWorker();
+// registerServiceWorker() omitido en el build compartible
+</script>
+</body>
+</html>

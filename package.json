@@ -8,6 +8,7 @@
     "start": "npx serve .",
     "qa:ethical": "node scripts/qa-ethical.mjs",
     "worker:deploy": "wrangler deploy",
+    "worker:secret:claude": "wrangler secret put CLAUDE_API_KEY",
     "worker:secret:gemini": "wrangler secret put GEMINI_API_KEY"
   },
   "keywords": [

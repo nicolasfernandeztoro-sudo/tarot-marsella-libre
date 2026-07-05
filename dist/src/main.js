@@ -121,7 +121,8 @@ let state = {
   copyMessage: "",
   loading: false,
   result: null,
-  error: ""
+  error: "",
+  readingCount: 0
 };
 
 function el(tag, options = {}, children = []) {
@@ -251,6 +252,10 @@ function QuestionGuide() {
     {
       before: "¿Debo dejar este proyecto?",
       after: "¿Qué tensión aparece entre seguir, descansar y cambiar de forma?"
+    },
+    {
+      before: "¿El tarot me dirá qué hacer?",
+      after: "¿Qué espero encontrar en esta consulta y qué límite necesito cuidar?"
     }
   ];
 
@@ -316,7 +321,7 @@ function QuestionForm() {
     aliasInput,
     el("label", { className: "field-label", text: "Tu pregunta", attributes: { for: "question" } }),
     textarea,
-    el("p", { id: "question-help", className: "field-help", text: "Mejor una pregunta para mirar que una pregunta para adivinar." }),
+    el("p", { id: "question-help", className: "field-help", text: "Mejor una pregunta para mirar que una pregunta para adivinar. También puedes preguntar por tu forma de consultar: qué esperas, qué temes y qué límite quieres cuidar." }),
     QuestionTools(),
     el("fieldset", { className: "area-group" }, [
       el("legend", { text: "Área" }),
@@ -546,6 +551,7 @@ function ReadingResult() {
     result.symbolicAct ? el("p", { className: "symbolic-act", text: result.symbolicAct }) : null,
     el("p", { className: "integration-question", text: result.integrationQuestion }),
     el("p", { className: "result-note", text: result.ethicalNote }),
+    UseBoundaryNote(),
     MethodPanel(result),
     ContactPanel(result)
   ];
@@ -571,6 +577,14 @@ function renderKeywords(words = []) {
   return el("ul", { className: "card-keywords", attributes: { "aria-label": "Palabras simbólicas" } },
     validWords.map((word) => el("li", { text: word }))
   );
+}
+
+function UseBoundaryNote() {
+  const text = state.readingCount >= 2
+    ? "Tal vez ya hay suficiente material para mirar por ahora. Antes de volver a consultar, anota una decisión pequeña, una pregunta nueva o un límite que quieras cuidar."
+    : "Antes de volver a consultar, escribe qué parte de la lectura quieres llevar a una acción pequeña o a una conversación real.";
+
+  return el("p", { className: "use-boundary-note", text });
 }
 
 function EthicalNote() {
@@ -608,7 +622,8 @@ function MethodPanel(result) {
       el("li", { text: "Inspiración: tarología de Alejandro Jodorowsky y Tarot de Marsella, como síntesis transformada, no representación oficial." }),
       el("li", { text: "Interpretación técnica: eje simbólico, tensión narrativa, giro y devolución de agencia." }),
       el("li", { text: "Decisión de diseño: no predicción, no diagnóstico, no cartas invertidas, no dependencia." }),
-      el("li", { text: providerText })
+      el("li", { text: providerText }),
+      result.fallbackDetail ? el("li", { text: `Detalle técnico: ${result.fallbackDetail}` }) : null
     ])
   ]);
 }
@@ -820,7 +835,7 @@ async function handleSubmit(event) {
   render();
 
   const result = await requestTarotReading({ alias, question, area, emotionalState, readingGoal, situationType, depth, tone, birthDate });
-  state = { ...state, loading: false, result };
+  state = { ...state, loading: false, result, readingCount: state.readingCount + 1 };
   render();
 }
 
@@ -924,16 +939,17 @@ function generateConnectionFallback(input) {
   const isRateLimit = status === 429;
   const title = isRateLimit
     ? "Hiciste varias lecturas muy seguidas"
-    : "No pude conectar con la lectura IA";
+    : "No pudimos conectar con la lectura completa";
   const briefReading = isRateLimit
-    ? "El Worker recibió demasiadas solicitudes en poco tiempo. Espera alrededor de un minuto y vuelve a intentarlo."
-    : "Reintenta en unos segundos. Si sigues viendo este mensaje en el teléfono, cierra la pestaña, vuelve a abrir la página y asegúrate de no estar usando una versión instalada antigua.";
+    ? "El servicio recibió demasiadas solicitudes en poco tiempo. Espera alrededor de un minuto y vuelve a intentarlo."
+    : "Puede ser una conexión temporalmente incompleta o una vista local sin acceso al servicio de lectura. Reintenta en unos segundos desde la página publicada.";
   const fallbackNotice = isRateLimit
     ? "Límite temporal de solicitudes. No se generó una lectura local."
-    : "Sin conexión con la IA del Worker. No se generó una lectura local.";
+    : "No se generó una lectura local para no confundir una falla de conexión con una interpretación simbólica.";
   const diagnostic = status
     ? `Estado técnico: Worker HTTP ${status}.`
     : `Estado técnico: sin respuesta HTTP del Worker (${input.error?.name || "error de red"}).`;
+  console.info("[tarot] connection fallback", diagnostic, input.error);
 
   return {
     title,
@@ -957,7 +973,8 @@ function generateConnectionFallback(input) {
     symbolicAct: "",
     integrationQuestion: "¿Puedes reintentar la lectura desde la página abierta en el navegador?",
     ethicalNote: ETHICAL_NOTE,
-    fallbackNotice: `${fallbackNotice} ${diagnostic}`,
+    fallbackNotice,
+    fallbackDetail: diagnostic,
     source: "connection-error"
   };
 }

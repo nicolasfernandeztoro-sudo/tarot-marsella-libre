@@ -2,10 +2,18 @@ import { MAJOR_ARCANA } from "./knowledge/major-arcana.js";
 import { buildExpandedSymbolicLayer, MARSEILLE_MAJOR_ARCANA_MEANINGS } from "./knowledge/marseille-major-arcana.js";
 
 const DISCLAIMER =
-  "Lectura simbólica y narrativa. No reemplaza atención médica, psicológica, legal ni decisiones personales importantes.";
+  "Lectura simbólica para autoconocimiento; no sustituye ayuda profesional.";
 
 const CRISIS_DISCLAIMER =
   "Esta página no reemplaza atención médica, psicológica ni ayuda de urgencia.";
+
+// Etiquetas legibles de la fuente simbólica declarada en fuentes_usadas.
+const SOURCE_LABELS = {
+  observacion_carta: "Observación directa de la imagen del Tarot de Marsella",
+  interpretacion_tecnica: "Interpretación estructural de la app: eje, tensión, orden y agencia",
+  jodorowsky_inspirado: "Síntesis transformada inspirada en la tarología de Alejandro Jodorowsky",
+  psicodinamica_prudente: "Lectura psicodinámica prudente de la pregunta, no diagnóstica"
+};
 
 const ALLOWED_ORIGINS = [
   "http://127.0.0.1:4173",
@@ -20,6 +28,33 @@ const ALLOWED_ORIGINS = [
 const ALLOWED_AREAS = new Set(["amor", "trabajo", "decision", "familia", "creatividad", "crisis", "animo", "otro"]);
 const ALLOWED_DEPTHS = new Set(["breve", "equilibrada", "profunda"]);
 const ALLOWED_TONES = new Set(["directo", "poetico", "contenedor"]);
+
+// Nuevo formulario de 5 preguntas (método Carta -> Pregunta -> Tensión -> Orden).
+const ALLOWED_EN_JUEGO = new Set(["elegir", "soltar", "entender"]);
+const ALLOWED_EMOCION = new Set(["angustia_miedo", "tristeza_duelo", "rabia_frustracion"]);
+const ALLOWED_TENSION = new Set(["deseo_deber", "apego_autonomia", "ideal_realidad"]);
+const ALLOWED_BUSQUEDA = new Set(["claridad", "calma", "movimiento"]);
+
+const EN_JUEGO_LABELS = {
+  elegir: "elegir entre opciones",
+  soltar: "soltar algo",
+  entender: "entender qué está pasando"
+};
+const EMOCION_LABELS = {
+  angustia_miedo: "angustia o miedo",
+  tristeza_duelo: "tristeza o duelo",
+  rabia_frustracion: "rabia o frustración"
+};
+const TENSION_LABELS = {
+  deseo_deber: "deseo frente a deber",
+  apego_autonomia: "apego frente a autonomía",
+  ideal_realidad: "ideal frente a realidad"
+};
+const BUSQUEDA_LABELS = {
+  claridad: "claridad",
+  calma: "calma",
+  movimiento: "movimiento"
+};
 
 const PROHIBITED_PATTERNS = [
   /el destino ha hablado/i,
@@ -48,6 +83,9 @@ const GENERIC_READING_PATTERNS = [
   /abre tu coraz[oó]n/i,
   /sigue tu camino/i,
   /la respuesta est[aá] dentro de ti/i,
+  /una persona que/i,
+  /claridad y orientacion/i,
+  /respuesta correcta/i,
   /ordena pregunta/i,
   /\b[aá]rea:\s*[a-z]/i,
   /se puede abordar la situaci[oó]n con una actitud abierta y reflexiva/i,
@@ -108,9 +146,14 @@ const GEMINI_BACKOFF = {
 };
 
 const DEFAULT_CLOUDFLARE_AI_MODEL = "@cf/meta/llama-3.2-3b-instruct";
+const DEFAULT_CLAUDE_MODEL = "claude-haiku-4-5-20251001";
+const CLAUDE_BACKOFF = {
+  until: 0
+};
 const PROVIDER_ATTEMPTS = {
-  "cloudflare-workers-ai": 3,
-  gemini: 2
+  claude: 2,
+  gemini: 2,
+  "cloudflare-workers-ai": 2
 };
 
 export default {
@@ -181,12 +224,34 @@ function normalizeInput(body) {
     ? String(body.tono).trim()
     : "contenedor";
 
+  // Nuevas 5 preguntas del formulario mínimo. La búsqueda del formulario nuevo usa
+  // valores acotados (claridad/calma/movimiento); si llega texto libre antiguo se conserva.
+  const enJuego = ALLOWED_EN_JUEGO.has(String(body?.en_juego || "").trim())
+    ? String(body.en_juego).trim()
+    : null;
+  const emocionDominante = ALLOWED_EMOCION.has(String(body?.emocion_dominante || "").trim())
+    ? String(body.emocion_dominante).trim()
+    : null;
+  const tensionPrincipal = ALLOWED_TENSION.has(String(body?.tension_principal || "").trim())
+    ? String(body.tension_principal).trim()
+    : null;
+  const busquedaRaw = String(body?.busqueda || "").trim();
+  const busqueda = ALLOWED_BUSQUEDA.has(busquedaRaw)
+    ? busquedaRaw
+    : cleanInput(body?.busqueda, 80) || "claridad";
+
   return {
     alias: cleanInput(body?.alias, 60),
     pregunta,
     area,
-    estado_emocional: cleanInput(body?.estado_emocional, 80) || "no indicado",
-    busqueda: cleanInput(body?.busqueda, 80) || "claridad",
+    en_juego: enJuego,
+    emocion_dominante: emocionDominante,
+    tension_principal: tensionPrincipal,
+    // estado_emocional legible: usa la nueva emoción dominante o el campo antiguo.
+    estado_emocional: emocionDominante
+      ? EMOCION_LABELS[emocionDominante]
+      : cleanInput(body?.estado_emocional, 80) || "no indicado",
+    busqueda,
     tipo_situacion: cleanInput(body?.tipo_situacion, 160) || "no indicado",
     profundidad,
     tono,
@@ -268,12 +333,16 @@ async function callAIProvider(context, env) {
   const providerErrors = [];
   const providers = [
     {
-      name: "cloudflare-workers-ai",
-      call: () => callCloudflareWorkersAI(context, env)
+      name: "claude",
+      call: () => callClaude(context, env)
     },
     {
       name: "gemini",
       call: () => callGemini(context, env)
+    },
+    {
+      name: "cloudflare-workers-ai",
+      call: () => callCloudflareWorkersAI(context, env)
     }
   ];
 
@@ -292,6 +361,68 @@ async function callAIProvider(context, env) {
   }
 
   return localSymbolicReading(context.input, context.carta, context.meaning, providerErrors);
+}
+
+async function callClaude(context, env) {
+  if (Date.now() < CLAUDE_BACKOFF.until) {
+    throw new Error("Claude en pausa breve por límite de cuota.");
+  }
+
+  const apiKey = env?.CLAUDE_API_KEY || env?.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error("Falta CLAUDE_API_KEY en el entorno del Worker.");
+  }
+
+  const model = env?.CLAUDE_MODEL || DEFAULT_CLAUDE_MODEL;
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01"
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 2048,
+      temperature: 0.6,
+      system: buildSystemPrompt(),
+      messages: [
+        {
+          role: "user",
+          content: buildUserPrompt(context.input, context.carta, context.meaning)
+        },
+        {
+          // Prefill: fuerza al modelo a continuar un JSON ya abierto.
+          role: "assistant",
+          content: "{"
+        }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    if (response.status === 429 || response.status === 529) {
+      CLAUDE_BACKOFF.until = Date.now() + retryDelayMs(errorBody);
+    }
+    throw new Error(`Claude respondió con estado ${response.status}: ${errorBody.slice(0, 500)}`);
+  }
+
+  const data = await response.json();
+  const raw = extractClaudeText(data);
+  // Se usó prefill "{": si el texto no empieza con la llave, se restituye antes de parsear.
+  return parseJsonFromModelText(raw.trim().startsWith("{") ? raw : `{${raw}`);
+}
+
+function extractClaudeText(data) {
+  const blocks = Array.isArray(data?.content) ? data.content : [];
+  const text = blocks.map((block) => block?.text || "").join("\n").trim();
+
+  if (!text) {
+    throw new Error("Claude no devolvió texto usable.");
+  }
+
+  return text;
 }
 
 async function callCloudflareWorkersAI(context, env) {
@@ -358,31 +489,42 @@ async function callGemini(context, env) {
           type: "OBJECT",
           properties: {
             titulo: { type: "STRING" },
-            pregunta_reformulada: { type: "STRING" },
-            escena_consultante: { type: "STRING" },
-            validacion_emocional: { type: "STRING" },
-            tension_narrativa: { type: "STRING" },
-            giro_simbolico: { type: "STRING" },
-            lectura: { type: "STRING" },
-            frase_tarologica: { type: "STRING" },
-            devolucion_agencia: { type: "STRING" },
-            orientacion: { type: "STRING" },
+            carta: {
+              type: "OBJECT",
+              properties: {
+                nombre: { type: "STRING" },
+                numero: { type: "STRING" },
+                tipo: { type: "STRING" },
+                significado_base: { type: "STRING" },
+                detalles_visuales_relevantes: { type: "ARRAY", items: { type: "STRING" } },
+                frase_simbolica: { type: "STRING" }
+              },
+              required: ["nombre", "significado_base", "frase_simbolica"]
+            },
+            pregunta_ordenada: { type: "STRING" },
+            lo_que_la_pregunta_parece_pedir: { type: "STRING" },
+            lo_que_la_pregunta_podria_ocultar: { type: "STRING" },
+            tension_psicodinamica: { type: "STRING" },
+            lectura_de_la_carta_en_esta_pregunta: { type: "STRING" },
+            etapa_vital: { type: "STRING" },
+            resolucion_simbolica: { type: "STRING" },
+            orientacion_practica: { type: "STRING" },
             acto_simbolico_opcional: { type: "STRING" },
-            pregunta_integracion: { type: "STRING" },
-            disclaimer: { type: "STRING" }
+            pregunta_final: { type: "STRING" },
+            disclaimer: { type: "STRING" },
+            fuentes_usadas: { type: "ARRAY", items: { type: "STRING" } }
           },
           required: [
             "titulo",
-            "pregunta_reformulada",
-            "escena_consultante",
-            "validacion_emocional",
-            "tension_narrativa",
-            "giro_simbolico",
-            "lectura",
-            "frase_tarologica",
-            "devolucion_agencia",
-            "orientacion",
-            "pregunta_integracion",
+            "carta",
+            "pregunta_ordenada",
+            "lo_que_la_pregunta_parece_pedir",
+            "lo_que_la_pregunta_podria_ocultar",
+            "tension_psicodinamica",
+            "lectura_de_la_carta_en_esta_pregunta",
+            "resolucion_simbolica",
+            "orientacion_practica",
+            "pregunta_final",
             "disclaimer"
           ]
         }
@@ -471,17 +613,16 @@ function parseLabeledReading(text) {
 
   const labels = [
     ["titulo", ["título", "titulo"]],
-    ["pregunta_reformulada", ["pregunta_reformulada", "pregunta reformulada"]],
-    ["escena_consultante", ["escena_consultante", "escena del consultante", "escena consultante", "escena"]],
-    ["validacion_emocional", ["validación emocional", "validacion emocional", "validación", "validacion"]],
-    ["tension_narrativa", ["tensión narrativa", "tension narrativa", "tensión", "tension"]],
-    ["giro_simbolico", ["giro simbólico", "giro simbolico", "giro"]],
-    ["lectura", ["lectura"]],
-    ["frase_tarologica", ["frase tarológica", "frase tarologica"]],
-    ["devolucion_agencia", ["devolución de agencia", "devolucion de agencia", "devolución agencia", "devolucion agencia"]],
-    ["orientacion", ["orientación", "orientacion"]],
+    ["pregunta_ordenada", ["pregunta_ordenada", "pregunta ordenada", "pregunta reformulada"]],
+    ["lo_que_la_pregunta_parece_pedir", ["lo que la pregunta parece pedir", "lo que parece pedir", "parece pedir"]],
+    ["lo_que_la_pregunta_podria_ocultar", ["lo que la pregunta podría ocultar", "lo que la pregunta podria ocultar", "lo que podría ocultar", "lo que podria ocultar", "podría ocultar", "podria ocultar"]],
+    ["tension_psicodinamica", ["tensión psicodinámica", "tension psicodinamica", "tensión", "tension"]],
+    ["lectura_de_la_carta_en_esta_pregunta", ["lectura de la carta en esta pregunta", "lectura de la carta", "lectura"]],
+    ["etapa_vital", ["etapa vital", "etapa"]],
+    ["resolucion_simbolica", ["resolución simbólica", "resolucion simbolica", "resolución", "resolucion"]],
+    ["orientacion_practica", ["orientación práctica", "orientacion practica", "orientación", "orientacion"]],
     ["acto_simbolico_opcional", ["acto simbólico opcional", "acto simbolico opcional", "acto simbólico", "acto simbolico"]],
-    ["pregunta_integracion", ["pregunta de integración", "pregunta de integracion", "pregunta integración", "pregunta integracion"]],
+    ["pregunta_final", ["pregunta final", "pregunta de cierre", "pregunta reflexiva"]],
     ["disclaimer", ["disclaimer"]]
   ];
 
@@ -520,7 +661,7 @@ function parseLabeledReading(text) {
     }
   }
 
-  return result.lectura || result.escena_consultante || result.tension_narrativa ? result : null;
+  return result.lectura_de_la_carta_en_esta_pregunta || result.resolucion_simbolica || result.tension_psicodinamica ? result : null;
 }
 
 function escapeRegExp(value) {
@@ -541,81 +682,93 @@ function safeTextPreview(value) {
 function buildSystemPrompt() {
   return [
     "Eres un lector simbólico de Tarot de Marsella inspirado en la tarología de Alejandro Jodorowsky y en el Tarot de Marsella. No eres Alejandro Jodorowsky, no lo representas y no afirmas que la lectura provenga literalmente de él. No predices el futuro. No diagnosticas. No das órdenes. No generas dependencia.",
-    "Tu tarea no es adivinar ni aconsejar. Tu tarea es ordenar simbólicamente la escena que el consultante trae.",
+    "Tu función no es adivinatoria. Es simbólica: ayudar al consultante a ordenar una duda que ocupa su mente. La pregunta expresa una tensión; debajo puede haber deseo, miedo, ambivalencia, defensa, repetición, idealización, culpa, duelo, rabia o dificultad para decidir.",
     "La IA no actúa como oráculo libre. Actúa como redactora simbólica dentro de una base autorizada de significados.",
-    "No muestres tu razonamiento interno ni frases de plantilla como 'ordena pregunta, área, emoción'. Usa esos datos para escribir una lectura humana, no una ficha técnica.",
+    "Aplica el método Carta -> Pregunta -> Tensión -> Orden, en este orden: 1) presenta la carta como protagonista; 2) explica su significado tarológico base; 3) relaciona la carta con la pregunta concreta; 4) ordena la pregunta del consultante; 5) formula una tensión psicodinámica prudente; 6) resuelve esa tensión simbólicamente; 7) devuelve agencia; 8) da orientación práctica no directiva; 9) propón un acto simbólico opcional, seguro y no médico; 10) cierra con una pregunta reflexiva.",
+    "No muestres tu razonamiento interno ni etiquetas de plantilla ('paso 1', 'tensión:', nombres de campos JSON) dentro del texto de los campos.",
     "Escribe principalmente en segunda persona amable: puedes mirar, tal vez conviene distinguir, puedes preguntarte. Evita sonar como informe clínico o ficha técnica.",
-    "No uses etiquetas visibles como Frase tarológica:, Pregunta integradora:, Orientación:, Acto simbólico opcional:, Escena:, Validación: ni nombres de campos JSON dentro del texto.",
-    "Evita 'se recomienda', 'la persona debe', 'el consultante debe' y 'tomar control'. Prefiere lenguaje de agencia: recuperar margen, ordenar una decisión, volver a tus manos, cuidar el siguiente paso.",
-    "Si la pregunta es larga o biográfica, menciona detalles concretos del relato: lugares, tensiones, pérdidas, recaídas, metas, temores o decisiones nombradas por el consultante. No respondas con generalidades.",
-    "Si aparecen dolor físico, recaídas, consumo, angustia intensa o salud mental, no diagnostiques ni indiques tratamiento. Incluye una orientación sobria hacia apoyo profesional o humano, integrada a la lectura y sin convertirla en alarma si no hay crisis explícita.",
-    "Si perfil_seguridad.alerta es cuidado, baja el tono poetico y prioriza compania humana, descanso, contacto seguro y apoyo profesional si la carga persiste. No lo trates como crisis suicida si no hay crisis explicita.",
-    "Si perfil_seguridad.alerta es predictiva, di claramente que la lectura no puede predecir futuro, leer la voluntad de otra persona ni entregar una sentencia. Reformula hacia lo observable, limites, necesidades y agencia presente.",
-    "Si recibes contexto_vital, úsalo sólo como etapa amplia de vida, sin mencionar edad exacta, fecha, destino, numerología ni obligación. Debe matizar la lectura con sobriedad, no definir a la persona.",
-    "Debes construir un arco narrativo: ESCENA -> VALIDACIÓN -> TENSIÓN -> GIRO SIMBÓLICO -> AGENCIA -> CIERRE.",
-    "ESCENA: integra pregunta, área, emoción, búsqueda y tipo de situación en una frase humana, sin etiquetas técnicas.",
-    "VALIDACIÓN: di por qué es comprensible que el consultante se sienta como indicó. No psicologices en exceso. No diagnostiques.",
-    "TENSIÓN: formula la contradicción central. Debe sentirse precisa y humana. No juzgues.",
-    "GIRO SIMBÓLICO: introduce la carta como una imagen que cambia el ángulo de mirada. La carta no responde por el consultante; propone una forma de mirar.",
-    "AGENCIA: devuelve al consultante la sensación de que ya hay una claridad inicial en su pregunta. La lectura debe ayudarle a ordenar, no a depender del oráculo.",
-    "CIERRE: propón una pregunta final concreta y un acto simbólico opcional, seguro, poético y no médico.",
-    "Antes de interpretar la carta, alude directamente a la pregunta del consultante. No repitas la pregunta de forma mecánica: interpreta qué tensión, deseo, duda o contradicción ya aparece en la forma de preguntar.",
+    "Escribe todo en español natural. No mezcles palabras en inglés como clarity, healing, energy, shadow, insight o guidance.",
+    "El titulo debe ser una frase breve y cerrada en español, sin cortar ideas a medio camino.",
+    "El campo carta.significado_base explica el sentido simbólico de la carta en general (no aún ligado a la pregunta). detalles_visuales_relevantes es una lista breve de elementos de la imagen (objetos, postura, dirección) tomados de la base autorizada. frase_simbolica es una sola línea evocadora, sin predicción.",
+    "pregunta_ordenada reformula la duda del consultante de forma más consciente y precisa, sin cerrarla ni responderla.",
+    "lo_que_la_pregunta_parece_pedir nombra el pedido explícito y aparente. lo_que_la_pregunta_podria_ocultar nombra con prudencia el deseo, miedo, ambivalencia, defensa, idealización, culpa, duelo o rabia que puede estar debajo. No afirmes certezas psicológicas: usa 'quizás', 'podría', 'tal vez'.",
+    "tension_psicodinamica formula la contradicción central entre lo que se pide y lo que se oculta, de forma prudente, precisa y no diagnóstica.",
+    "lectura_de_la_carta_en_esta_pregunta conecta la imagen de la carta con la pregunta concreta: cómo esa imagen ilumina la tensión. Menciona detalles concretos del relato del consultante si los hay.",
+    "resolucion_simbolica ofrece una salida simbólica a la tensión y devuelve agencia: la carta no decide, pero propone un modo de mirar que ordena la duda y la devuelve a las manos del consultante.",
+    "orientacion_practica da una orientación no directiva: sugiere, no ordena. Puede incluir un gesto pequeño, seguro y practicable hoy (pausar, escribir una frase, hablar con alguien de confianza, distinguir un límite). Nunca la presentes como solución garantizada.",
+    "acto_simbolico_opcional debe ser seguro, simple, no médico, no peligroso, sin promesa de resultado y poder omitirse.",
+    "pregunta_final es una sola pregunta abierta y reflexiva que devuelve agencia.",
+    "etapa_vital: si recibes contexto_vital, descríbela como etapa amplia de vida (sin edad exacta, fecha, destino ni numerología) que matiza la lectura con sobriedad. Si no hay contexto_vital, deja etapa_vital como cadena vacía.",
+    "fuentes_usadas: lista breve de las fuentes simbólicas realmente usadas, con estas claves permitidas: observacion_carta, interpretacion_tecnica, jodorowsky_inspirado, psicodinamica_prudente.",
+    "Cada campo debe cumplir una función distinta. No repitas la misma idea con otras palabras entre lectura_de_la_carta_en_esta_pregunta, resolucion_simbolica, orientacion_practica, acto_simbolico_opcional y pregunta_final.",
+    "Si aparecen dolor físico, recaídas, consumo, angustia intensa o salud mental, no diagnostiques ni indiques tratamiento. Incluye una orientación sobria hacia apoyo profesional o humano, integrada y sin convertirla en alarma si no hay crisis explícita.",
+    "Si perfil_seguridad.alerta es cuidado, baja el tono poético y prioriza compañía humana, descanso, contacto seguro y apoyo profesional si la carga persiste. No lo trates como crisis suicida si no hay crisis explícita.",
+    "Si perfil_seguridad.alerta es predictiva, di claramente que la lectura no puede predecir el futuro, leer la voluntad de otra persona ni entregar una sentencia. Reformula hacia lo observable, los límites, las necesidades y la agencia presente.",
+    "Si la pregunta está escrita en primera persona, responde en segunda persona. No digas 'una persona', 'el consultante' ni describas la escena desde afuera.",
     "Idea central: la duda no significa ausencia de claridad. Muchas veces la duda muestra que algo ya empezó a ordenarse, pero necesita una imagen para ser visto desde otro lugar.",
-    "Usa la base simbólica autorizada de la carta como marco obligatorio: escena visual, eje simbólico, tensión narrativa, giro simbólico, devolución de agencia, pregunta de integración, acto simbólico seguro y notas por área.",
+    "Usa la base simbólica autorizada de la carta como marco obligatorio: escena visual, eje simbólico, tensión narrativa, giro simbólico, devolución de agencia, acto simbólico seguro y notas por área.",
     "No inventes significados externos. No agregues astrología, karma, canalización, destino, predicción ni magia literal.",
-    "Usa biblioteca_simbolica_ampliada para dar mas precision: lentes visuales, familias narrativas, polaridades no predictivas, seguridad de la carta y taxonomia de fuentes. No menciones toda la taxonomia al usuario salvo que ayude a aclarar origen.",
-    "Cuando uses material inspirado en Jodorowsky, tratalo como inspiracion transformada, no como cita ni metodo oficial. No digas 'segun el metodo de Jodorowsky'.",
-    "La carta ya fue seleccionada por el sistema. No cambies la carta. No inventes otra carta.",
-    "No usas lenguaje de vidente omnisciente, fatalista, médico, legal ni financiero.",
-    "Interpreta solo la carta entregada. No uses cartas invertidas ni menciones cartas no entregadas.",
-    "Usa formulaciones como: podrías observar; puede ayudarte mirar; esta carta propone una imagen; una posibilidad de lectura es; la carta no decide por ti; la pregunta ya muestra; lo que traes puede ordenarse así.",
-    "El acto simbólico opcional debe ser seguro, simple, no médico, no peligroso, no prometer resultados y poder omitirse.",
+    "Cuando uses material inspirado en Jodorowsky, trátalo como inspiración transformada, no como cita ni método oficial. No digas 'según el método de Jodorowsky'.",
+    "La carta ya fue seleccionada por el sistema. No cambies la carta. No inventes otra carta. No uses cartas invertidas ni menciones cartas no entregadas.",
+    "No usas lenguaje de vidente omnisciente, fatalista, médico, legal ni financiero. No llames mala a ninguna carta.",
     "Ajusta la extensión según profundidad: breve 250 a 350 palabras totales; equilibrada 450 a 650; profunda 750 a 950.",
     "No agregues introducciones, markdown ni comentarios fuera del JSON. No uses comillas innecesarias dentro de los campos.",
     "No uses estas frases ni variantes: El destino ha hablado; Tu futuro está escrito; La carta revela tu verdad; Sanación energética; Diagnóstico espiritual; El universo quiere decirte; Vibración; Energía bloqueada; Canalización; Respuesta definitiva; Te diré si te ama; Esto cambiará tu vida; Te va a pasar; Debes hacer; La carta anuncia; la carta dice que.",
     "Devuelve exclusivamente JSON válido. No uses markdown. No agregues texto fuera del JSON.",
-    "Devuelve estas claves: titulo, pregunta_reformulada, escena_consultante, validacion_emocional, tension_narrativa, giro_simbolico, lectura, frase_tarologica, devolucion_agencia, orientacion, acto_simbolico_opcional, pregunta_integracion, disclaimer.",
+    "Devuelve estas claves: titulo, carta (con nombre, numero, tipo, significado_base, detalles_visuales_relevantes, frase_simbolica), pregunta_ordenada, lo_que_la_pregunta_parece_pedir, lo_que_la_pregunta_podria_ocultar, tension_psicodinamica, lectura_de_la_carta_en_esta_pregunta, etapa_vital, resolucion_simbolica, orientacion_practica, acto_simbolico_opcional, pregunta_final, disclaimer, fuentes_usadas.",
     `El disclaimer debe ser exactamente: ${DISCLAIMER}`,
-    "El Worker adjuntará la carta real, modo, provider y alerta."
+    "El Worker adjuntará la carta real, el modo, el provider y la alerta."
   ].join("\n");
 }
 
 function buildUserPrompt(input, carta, meaning) {
   return JSON.stringify({
     pregunta: input.pregunta,
-    area: input.area,
+    formulario: {
+      area: input.area,
+      en_juego: input.en_juego ? EN_JUEGO_LABELS[input.en_juego] : null,
+      emocion_dominante: input.emocion_dominante ? EMOCION_LABELS[input.emocion_dominante] : null,
+      tension_principal: input.tension_principal ? TENSION_LABELS[input.tension_principal] : null,
+      busqueda: BUSQUEDA_LABELS[input.busqueda] || input.busqueda
+    },
     alias: input.alias,
-    estado_emocional: input.estado_emocional,
-    busqueda: input.busqueda,
-    tipo_situacion: input.tipo_situacion,
-    profundidad: input.profundidad,
-    tono: input.tono,
     contexto_vital: input.contexto_vital
       ? {
           etapa: input.contexto_vital.etapa,
           uso: "matiz narrativo opcional, no predictivo; no mencionar edad exacta ni fecha"
         }
       : null,
+    profundidad: input.profundidad,
+    tono: input.tono,
     parametros: input.parametros,
     carta,
     base_simbolica_autorizada: buildAuthorizedMeaning(meaning, input.area),
     contexto_concreto_detectado: buildQuestionContext(input.pregunta),
     temas_sensibles_detectados: detectSensitiveThemes(input.pregunta),
     perfil_seguridad: input.perfil_seguridad || buildSafetyProfile(input),
+    metodo: "Carta -> Pregunta -> Tensión -> Orden",
     formato: {
       titulo: "titulo sobrio, maximo 12 palabras, sin sensacionalismo",
-      pregunta_reformulada: "una frase que vuelva la pregunta mas consciente sin cerrarla",
-      escena_consultante: "escena humana breve que use detalles concretos; no escribir etiquetas de formato",
-      validacion_emocional: "nombra por que la emocion declarada es comprensible, sin diagnosticar",
-      tension_narrativa: "formula la contradiccion central de la escena, sin juzgar",
-      giro_simbolico: "introduce la carta como imagen que cambia el angulo de mirada",
-      lectura: "desarrollo personalizado del arco narrativo y simbolico; si hay contexto_vital, integralo como etapa amplia sin determinismo",
-      frase_tarologica: "una linea simbolica sobre la carta, sin prediccion",
-      devolucion_agencia: "devuelve capacidad de accion y claridad inicial sin dar ordenes",
-      orientacion: "orientacion suave, sin ordenes",
-      acto_simbolico_opcional: "acto seguro y opcional, no medico, no promesa, no tratamiento",
-      pregunta_integracion: "una sola pregunta abierta que devuelva agencia",
-      disclaimer: DISCLAIMER
+      carta: {
+        nombre: "nombre de la carta entregada; no cambiarla",
+        numero: "numero romano de la carta entregada",
+        tipo: "mayor",
+        significado_base: "sentido simbolico general de la carta, aun no ligado a la pregunta",
+        detalles_visuales_relevantes: "lista breve de elementos de la imagen tomados de la base autorizada",
+        frase_simbolica: "una sola linea evocadora sobre la carta, sin prediccion"
+      },
+      pregunta_ordenada: "reformula la duda de forma mas consciente y precisa, sin responderla",
+      lo_que_la_pregunta_parece_pedir: "el pedido explicito y aparente de la pregunta",
+      lo_que_la_pregunta_podria_ocultar: "con prudencia (quizas, podria), el deseo, miedo, ambivalencia, defensa, idealizacion, culpa, duelo o rabia debajo",
+      tension_psicodinamica: "la contradiccion central entre lo que se pide y lo que se oculta, no diagnostica",
+      lectura_de_la_carta_en_esta_pregunta: "conecta la imagen de la carta con la pregunta concreta usando detalles del relato",
+      etapa_vital: "si hay contexto_vital, etapa amplia sin edad ni destino; si no, cadena vacia",
+      resolucion_simbolica: "salida simbolica a la tension que devuelve agencia; la carta no decide",
+      orientacion_practica: "orientacion no directiva, con un gesto pequeno seguro y opcional",
+      acto_simbolico_opcional: "acto seguro y opcional, no medico, no promesa, poder omitirse",
+      pregunta_final: "una sola pregunta abierta y reflexiva que devuelve agencia",
+      disclaimer: DISCLAIMER,
+      fuentes_usadas: "lista con claves: observacion_carta, interpretacion_tecnica, jodorowsky_inspirado, psicodinamica_prudente"
     }
   });
 }
@@ -649,6 +802,8 @@ function buildQuestionContext(question) {
   return {
     anclas_concretas: meaningfulQuestionTokens(text).slice(0, 10),
     resumen_operativo: summarizeQuestionForPrompt(text),
+    pregunta_en_primera_persona: isFirstPersonQuestion(text),
+    temor_a_dependencia_o_consulta: hasConsultationDependenceConcern(text),
     requiere_cuidado_no_diagnostico: detectSensitiveThemes(text).length > 0
   };
 }
@@ -690,12 +845,13 @@ function normalizeAiReading(value, context, provider) {
   }
 
   const hasCoreReading = [
-    value.escena_consultante,
-    value.tension_narrativa,
-    value.giro_simbolico,
+    value.lectura_de_la_carta_en_esta_pregunta,
+    value.tension_psicodinamica,
+    value.resolucion_simbolica,
+    // Compatibilidad defensiva por si el modelo responde con claves antiguas.
     value.lectura,
-    value.sintesis,
-    value.tension_o_contradiccion
+    value.escena_consultante,
+    value.giro_simbolico
   ].some((field) => String(field || "").trim());
 
   if (!hasCoreReading) {
@@ -705,21 +861,25 @@ function normalizeAiReading(value, context, provider) {
   const normalizedCard = normalizeCard(context.carta, context.carta);
   const wordLimits = readingWordLimitsForDepth(context.input?.profundidad);
   const repair = repairReadingFields(value, context, normalizedCard);
+  const title = normalizeReadingTitle(repair.titulo, context, normalizedCard);
+  const cartaObject = buildCartaObject(value.carta, context.meaning, normalizedCard, repair);
+  const etapa = cleanText(repair.etapa_vital || context.input?.contexto_vital?.etapa || "");
+
   const reading = {
-    titulo: limitWords(cleanTitle(repair.titulo), 12),
-    pregunta_reformulada: limitSentences(cleanText(repair.pregunta_reformulada), 1),
-    carta: normalizedCard,
-    escena_consultante: limitWords(cleanText(repair.escena_consultante), 130),
-    validacion_emocional: limitWords(cleanText(repair.validacion_emocional), 100),
-    tension_narrativa: limitWords(cleanText(repair.tension_narrativa), 120),
-    giro_simbolico: limitWords(cleanText(repair.giro_simbolico), 130),
-    lectura: limitWords(cleanText(repair.lectura), wordLimits.lectura),
-    frase_tarologica: limitSentences(cleanText(repair.frase_tarologica), 1),
-    devolucion_agencia: limitWords(cleanText(repair.devolucion_agencia), 130),
-    orientacion: limitWords(cleanText(repair.orientacion), wordLimits.orientacion),
-    acto_simbolico_opcional: limitWords(cleanText(repair.acto_simbolico_opcional), 80),
-    pregunta_integracion: ensureQuestion(limitSentences(cleanText(repair.pregunta_integracion), 1)),
+    titulo: title,
+    carta: cartaObject,
+    pregunta_ordenada: limitSentences(cleanText(repair.pregunta_ordenada), 2),
+    lo_que_la_pregunta_parece_pedir: limitWords(cleanText(repair.lo_que_la_pregunta_parece_pedir), 90),
+    lo_que_la_pregunta_podria_ocultar: limitWords(cleanText(repair.lo_que_la_pregunta_podria_ocultar), 110),
+    tension_psicodinamica: limitWords(cleanText(repair.tension_psicodinamica), 120),
+    lectura_de_la_carta_en_esta_pregunta: limitWords(cleanText(repair.lectura_de_la_carta_en_esta_pregunta), wordLimits.lectura),
+    etapa_vital: etapa,
+    resolucion_simbolica: limitWords(cleanText(repair.resolucion_simbolica), 150),
+    orientacion_practica: limitWords(cleanText(repair.orientacion_practica), wordLimits.orientacion),
+    acto_simbolico_opcional: limitWords(cleanText(repair.acto_simbolico_opcional), 90),
+    pregunta_final: ensureQuestion(limitSentences(cleanText(repair.pregunta_final), 1)),
     disclaimer: DISCLAIMER,
+    fuentes_usadas: normalizeSources(value.fuentes_usadas, context.meaning),
     modo: "ia-real",
     provider,
     base_simbolica_usada: Boolean(context.meaning),
@@ -728,34 +888,35 @@ function normalizeAiReading(value, context, provider) {
   };
 
   if (reading.alerta === "predictiva") {
-    reading.pregunta_reformulada = "La pregunta pide una certeza que esta lectura no puede entregar; puede mirarse mejor desde lo observable, tus limites y tu margen de accion.";
-    reading.lectura = limitWords(cleanText(`Esta lectura no predice el futuro ni lee la voluntad de otra persona. ${reading.lectura}`), wordLimits.lectura);
-    reading.orientacion = "Puedes reformular la pregunta asi: que señales concretas puedo observar, que limite necesito cuidar y que decision pequena depende de mi ahora.";
-    reading.pregunta_integracion = "¿Qué parte de esta situación puedes observar sin convertirla en una predicción?";
+    reading.pregunta_ordenada = "La pregunta pide una certeza que esta lectura no puede entregar; puede mirarse mejor desde lo observable, tus límites y tu margen de acción.";
+    reading.lo_que_la_pregunta_parece_pedir = "Pide una certeza sobre el futuro o sobre la voluntad de otra persona.";
+    reading.lectura_de_la_carta_en_esta_pregunta = limitWords(cleanText(`Esta lectura no predice el futuro ni lee la voluntad de otra persona. ${reading.lectura_de_la_carta_en_esta_pregunta}`), wordLimits.lectura);
+    reading.orientacion_practica = "Puedes reformular la pregunta así: qué señales concretas puedo observar, qué límite necesito cuidar y qué decisión pequeña depende de mí ahora.";
+    reading.pregunta_final = "¿Qué parte de esta situación puedes observar sin convertirla en una predicción?";
   }
 
   if (reading.alerta === "cuidado") {
-    reading.orientacion = "Mantener una lectura sobria: si la angustia se vuelve dificil de sostener, puede ayudarte hablar con alguien de confianza o con apoyo profesional.";
+    reading.orientacion_practica = "Mantener una lectura sobria: si la angustia se vuelve difícil de sostener, puede ayudarte hablar con alguien de confianza o con apoyo profesional.";
   }
 
   const joined = [
     reading.titulo,
-    reading.pregunta_reformulada,
     reading.carta.nombre,
-    reading.carta.palabras.join(" "),
-    reading.escena_consultante,
-    reading.validacion_emocional,
-    reading.tension_narrativa,
-    reading.giro_simbolico,
-    reading.lectura,
-    reading.frase_tarologica,
-    reading.devolucion_agencia,
-    reading.orientacion,
+    reading.carta.significado_base,
+    reading.carta.frase_simbolica,
+    (reading.carta.detalles_visuales_relevantes || []).join(" "),
+    reading.pregunta_ordenada,
+    reading.lo_que_la_pregunta_parece_pedir,
+    reading.lo_que_la_pregunta_podria_ocultar,
+    reading.tension_psicodinamica,
+    reading.lectura_de_la_carta_en_esta_pregunta,
+    reading.resolucion_simbolica,
+    reading.orientacion_practica,
     reading.acto_simbolico_opcional,
-    reading.pregunta_integracion
+    reading.pregunta_final
   ].join(" ");
 
-  if (!reading.lectura || PROHIBITED_PATTERNS.some((pattern) => pattern.test(joined))) {
+  if (!reading.lectura_de_la_carta_en_esta_pregunta || PROHIBITED_PATTERNS.some((pattern) => pattern.test(joined))) {
     throw new Error("La respuesta IA no pasó los filtros éticos.");
   }
 
@@ -767,20 +928,68 @@ function normalizeAiReading(value, context, provider) {
   return reading;
 }
 
+function buildCartaObject(value, meaning, normalizedCard) {
+  const source = value && typeof value === "object" ? value : {};
+  const expanded = meaning ? buildExpandedSymbolicLayer(meaning) : null;
+  const visualFromLenses = Array.isArray(expanded?.lentes_visuales) ? expanded.lentes_visuales : [];
+  const aiDetalles = Array.isArray(source.detalles_visuales_relevantes)
+    ? source.detalles_visuales_relevantes.map((detail) => cleanText(detail)).filter(Boolean)
+    : [];
+  const detalles = (aiDetalles.length ? aiDetalles : visualFromLenses)
+    .map((detail) => cleanText(detail))
+    .filter(Boolean)
+    .slice(0, 6);
+
+  const significadoBase = limitWords(cleanText(
+    source.significado_base || meaning?.eje_simbolico || `Mirar la pregunta desde ${normalizedCard.palabras.join(", ")}.`
+  ), 70);
+  const fraseSimbolica = limitSentences(cleanText(
+    source.frase_simbolica || meaning?.giro_simbolico || `${normalizedCard.nombre} abre una mirada, no una conclusión.`
+  ), 1);
+
+  return {
+    nombre: normalizedCard.nombre,
+    numero: normalizedCard.numero,
+    tipo: normalizedCard.tipo || "mayor",
+    imagen: normalizedCard.imagen,
+    significado_base: significadoBase,
+    detalles_visuales_relevantes: detalles.length ? detalles : normalizedCard.palabras.slice(0, 4),
+    frase_simbolica: fraseSimbolica,
+    palabras_clave: normalizedCard.palabras
+  };
+}
+
+function normalizeSources(value, meaning) {
+  const out = [];
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const raw = String(item || "").trim();
+      if (!raw) continue;
+      const key = raw.toLowerCase().replace(/\s+/g, "_");
+      out.push(SOURCE_LABELS[key] || cleanText(raw));
+    }
+  }
+  if (!out.length) {
+    const keys = meaning
+      ? ["observacion_carta", "interpretacion_tecnica", "jodorowsky_inspirado"]
+      : ["interpretacion_tecnica"];
+    keys.forEach((key) => out.push(SOURCE_LABELS[key]));
+  }
+  return [...new Set(out)].slice(0, 6);
+}
+
 function assessReadingQuality(reading, context) {
   const reasons = [];
   const text = normalizeForMatch([
-    reading.pregunta_reformulada,
-    reading.escena_consultante,
-    reading.validacion_emocional,
-    reading.tension_narrativa,
-    reading.giro_simbolico,
-    reading.lectura,
-    reading.frase_tarologica,
-    reading.devolucion_agencia,
-    reading.orientacion,
+    reading.pregunta_ordenada,
+    reading.lo_que_la_pregunta_parece_pedir,
+    reading.lo_que_la_pregunta_podria_ocultar,
+    reading.tension_psicodinamica,
+    reading.lectura_de_la_carta_en_esta_pregunta,
+    reading.resolucion_simbolica,
+    reading.orientacion_practica,
     reading.acto_simbolico_opcional,
-    reading.pregunta_integracion
+    reading.pregunta_final
   ].join(" "));
   const questionTokens = meaningfulQuestionTokens(context.input?.pregunta);
   const matchedQuestionTokens = questionTokens.filter((token) => text.includes(token));
@@ -793,20 +1002,27 @@ function assessReadingQuality(reading, context) {
     ? context.meaning.palabras_clave.map(normalizeForMatch).filter(Boolean)
     : [];
   const symbolicWords = [...new Set([...cardWords, ...meaningWords])];
-  const cardMentioned = cardName && text.includes(cardName);
-  const symbolicBaseTouched = symbolicWords.some((word) => word && text.includes(word));
+  const cardText = normalizeForMatch([
+    reading.carta?.nombre,
+    reading.carta?.significado_base,
+    reading.carta?.frase_simbolica,
+    (reading.carta?.detalles_visuales_relevantes || []).join(" ")
+  ].join(" "));
+  const fullText = `${cardText} ${text}`;
+  const cardMentioned = cardName && fullText.includes(cardName);
+  const symbolicBaseTouched = symbolicWords.some((word) => word && fullText.includes(word));
   const hasArc = [
-    reading.escena_consultante,
-    reading.validacion_emocional,
-    reading.tension_narrativa,
-    reading.giro_simbolico,
-    reading.devolucion_agencia,
-    reading.pregunta_integracion
+    reading.pregunta_ordenada,
+    reading.lo_que_la_pregunta_parece_pedir,
+    reading.lo_que_la_pregunta_podria_ocultar,
+    reading.tension_psicodinamica,
+    reading.resolucion_simbolica,
+    reading.pregunta_final
   ].every((field) => String(field || "").trim().length >= 24);
   const agencyLanguage = /\b(puedes|podrias|podrías|observar|mirar|distinguir|elegir|nombrar|reconocer|vuelve a tus manos)\b/i.test([
-    reading.devolucion_agencia,
-    reading.orientacion,
-    reading.pregunta_integracion
+    reading.resolucion_simbolica,
+    reading.orientacion_practica,
+    reading.pregunta_final
   ].join(" "));
 
   if (minimumQuestionMatches && matchedQuestionTokens.length < minimumQuestionMatches) {
@@ -833,9 +1049,47 @@ function assessReadingQuality(reading, context) {
     reasons.push("usa lenguaje genérico");
   }
 
+  if (hasEnglishLeak(reading.titulo) || hasEnglishLeak(text)) {
+    reasons.push("mezcla idioma no solicitado");
+  }
+
+  if (hasWeakTitle(reading.titulo)) {
+    reasons.push("titulo incompleto o poco confiable");
+  }
+
+  if (!hasPracticalReliefGesture(reading)) {
+    reasons.push("no ofrece un gesto practico de alivio");
+  }
+
+  if (isFirstPersonQuestion(context.input?.pregunta) && /\b(una persona|el consultante|la persona)\b/i.test(text)) {
+    reasons.push("toma distancia generica de una pregunta en primera persona");
+  }
+
+  if (hasConsultationDependenceConcern(context.input?.pregunta)) {
+    const dependenceAnchors = [
+      /\b(engancharse|depender|dependencia|oraculo|oraculo|tarot|consulta|consultar)\b/i,
+      /\b(agencia|margen|limite|limites|cuidar|cerrar)\b/i,
+      /\b(claridad|respuesta|certeza)\b/i
+    ];
+    const touchedAnchors = dependenceAnchors.filter((pattern) => pattern.test(text)).length;
+    if (touchedAnchors < 3) {
+      reasons.push("no aborda el temor a depender de la consulta");
+    }
+  }
+
+  if (hasRepeatedFieldCore(reading)) {
+    reasons.push("repite demasiado la misma idea entre campos");
+  }
+
   const criticalReasons = reasons.filter((reason) => [
     "no sostiene escena-validacion-tension-giro-agencia",
-    "usa lenguaje genérico"
+    "usa lenguaje genérico",
+    "mezcla idioma no solicitado",
+    "titulo incompleto o poco confiable",
+    "no ofrece un gesto practico de alivio",
+    "toma distancia generica de una pregunta en primera persona",
+    "no aborda el temor a depender de la consulta",
+    "repite demasiado la misma idea entre campos"
   ].includes(reason));
 
   return {
@@ -843,6 +1097,89 @@ function assessReadingQuality(reading, context) {
     reasons,
     criticalReasons
   };
+}
+
+function normalizeReadingTitle(value, context, card) {
+  const cleaned = limitWords(cleanTitle(value), 12)
+    .replace(/\bClarity\b/gi, "claridad")
+    .replace(/\bGuidance\b/gi, "orientacion")
+    .replace(/\bInsight\b/gi, "mirada")
+    .trim();
+
+  if (!hasWeakTitle(cleaned) && !hasEnglishLeak(cleaned)) {
+    return cleaned;
+  }
+
+  const area = areaLabel(context.input?.area).toLowerCase();
+  const cardName = cleanText(card?.nombre || "la carta");
+  if (context.safetyProfile?.alerta === "predictiva") {
+    return "Una pausa antes de buscar certeza";
+  }
+  if (context.safetyProfile?.alerta === "cuidado") {
+    return "Una pausa para bajar la carga";
+  }
+  if (hasConsultationDependenceConcern(context.input?.pregunta)) {
+    return "Consultar sin ceder agencia";
+  }
+  return `Mirar ${area} con ${cardName}`;
+}
+
+function hasWeakTitle(value) {
+  const title = String(value || "").trim();
+  if (!title || title.length < 6) return true;
+  if (title.length > 90) return true;
+  if (/\b(la|el|de|del|que|para|con|sin|hacia|desde|y|o)$/i.test(title)) return true;
+  if (/[,:;]$/.test(title)) return true;
+  return false;
+}
+
+function hasEnglishLeak(value) {
+  return /\b(clarity|guidance|healing|energy|shadow|insight|journey|mindfulness|self-care)\b/i.test(String(value || ""));
+}
+
+function hasPracticalReliefGesture(reading) {
+  const text = normalizeForMatch([
+    reading.orientacion_practica,
+    reading.acto_simbolico_opcional,
+    reading.pregunta_final,
+    reading.resolucion_simbolica
+  ].join(" "));
+  return /\b(respira|respirar|pausa|pausar|escribe|escribir|anota|nombrar|hablar|conversacion|limite|accion pequena|gesto pequeno|descanso|acompan)\b/.test(text);
+}
+
+function isFirstPersonQuestion(value) {
+  const text = normalizeForMatch(value);
+  return /\b(yo|me|mi|mis|conmigo|quiero|temo|necesito|puedo|estoy|siento)\b/.test(text);
+}
+
+function hasConsultationDependenceConcern(value) {
+  const text = normalizeForMatch(value);
+  return /\b(consultar|consulta|tarot|oraculo|respuesta|certeza|enganchar\w*|dependencia|depender|darle poder|cede agencia|ceder agencia)\b/.test(text) &&
+    /\b(temo|temor|miedo|enganchar\w*|depender|poder|agencia|limite|limites|cuidar)\b/.test(text);
+}
+
+function hasRepeatedFieldCore(reading) {
+  const fields = [
+    reading.lectura_de_la_carta_en_esta_pregunta,
+    reading.tension_psicodinamica,
+    reading.resolucion_simbolica,
+    reading.orientacion_practica,
+    reading.acto_simbolico_opcional,
+    reading.pregunta_final
+  ].map((field) => normalizeForMatch(field)
+    .split(/\s+/)
+    .filter((word) => word.length > 4 && !QUESTION_STOPWORDS.has(word))
+    .slice(0, 14)
+    .join(" "))
+    .filter(Boolean);
+
+  return fields.some((field, index) => fields.slice(index + 1).some((other) => {
+    if (field === other) return true;
+    const left = new Set(field.split(" "));
+    const right = other.split(" ");
+    const overlap = right.filter((word) => left.has(word)).length;
+    return left.size >= 6 && right.length >= 6 && overlap / Math.min(left.size, right.length) >= 0.75;
+  }));
 }
 
 function minimumQuestionTokenMatches(tokenCount) {
@@ -887,45 +1224,60 @@ function repairReadingFields(value, context, carta) {
   const input = context.input || {};
   const meaning = context.meaning;
   const area = areaLabel(input.area).toLowerCase();
-  const emotion = cleanOptional(input.estado_emocional);
-  const search = cleanOptional(input.busqueda) || "claridad";
-  const situation = cleanOptional(input.tipo_situacion);
-  const alias = input.alias ? `${input.alias}, ` : "";
   const question = input.pregunta || "la pregunta";
-  const fallbackCore = value.lectura || value.escena_consultante || value.sintesis || value.giro_simbolico || value.tension_narrativa || "";
-  const areaMeaning = meaning?.areas?.[input.area] || meaning?.areas?.otro || `la relación entre ${carta.palabras.join(", ")}`;
-  const visualScene = meaning?.escena_visual || `${carta.nombre} pone sobre la mesa la relación entre ${carta.palabras.join(", ")}.`;
-  const symbolicAxis = meaning?.eje_simbolico || `Mirar la pregunta desde ${carta.palabras.join(", ")}.`;
-  const narrativeTension = meaning?.tension_narrativa || "La tensión parece estar entre querer una respuesta inmediata y necesitar mirar con más precisión.";
-  const symbolicTurn = meaning?.giro_simbolico || `${carta.nombre} no decide por ti: propone cambiar el ángulo de mirada.`;
-  const agency = meaning?.devolucion_agencia || "La carta no decide por ti. Te devuelve una posibilidad de observación y acción consciente.";
-  const integrationQuestion = meaning?.pregunta_integracion || "¿Qué parte de esta escena vuelve ahora a tus manos?";
+  const alias = input.alias ? `${input.alias}, ` : "";
+  const enJuego = input.en_juego ? EN_JUEGO_LABELS[input.en_juego] : "";
+  const emotion = input.emocion_dominante ? EMOCION_LABELS[input.emocion_dominante] : cleanOptional(input.estado_emocional);
+  const tensionSel = input.tension_principal ? TENSION_LABELS[input.tension_principal] : "";
+  const search = BUSQUEDA_LABELS[input.busqueda] || cleanOptional(input.busqueda) || "claridad";
+  const palabras = carta.palabras.join(", ");
+  const areaMeaning = meaning?.areas?.[input.area] || meaning?.areas?.otro || `la relación entre ${palabras}`;
+  const eje = meaning?.eje_simbolico || `mirar la pregunta desde ${palabras}`;
+  const tensionBase = meaning?.tension_narrativa || "La tensión parece estar entre querer una respuesta inmediata y necesitar mirar con más precisión.";
+  const giro = meaning?.giro_simbolico || `${carta.nombre} no decide por ti: propone cambiar el ángulo de mirada.`;
+  const agency = meaning?.devolucion_agencia || "La carta no decide por ti; te devuelve una posibilidad de observación y acción consciente.";
+  const integrationQuestion = meaning?.pregunta_integracion || "¿Qué parte de esta pregunta vuelve ahora a tus manos?";
   const symbolicAct = meaning?.acto_simbolico_seguro || "Si te sirve, escribe la pregunta y subraya una sola palabra que hoy necesite más cuidado.";
 
   return {
     titulo: value.titulo || `Mirada con ${carta.nombre}`,
-    pregunta_reformulada: value.pregunta_reformulada || `${alias}tu pregunta sobre ${area} puede mirarse como una tensión entre lo que quieres cuidar y lo que necesita decidirse con más claridad.`,
-    escena_consultante: value.escena_consultante || value.sintesis || `Con lo que traes —"${question}"— aparece una escena que ya tiene forma suficiente para mirarla sin cerrarla de inmediato. ${visualScene}`,
-    validacion_emocional: value.validacion_emocional || `Es comprensible que esta pregunta pida cuidado: no busca una sentencia, sino una forma más clara de mirar${situation ? ` una situación descrita como "${situation}"` : " lo que está en juego"}.`,
-    tension_narrativa: value.tension_narrativa || value.tension_o_contradiccion || narrativeTension,
-    giro_simbolico: value.giro_simbolico || value.imagen_simbolica || symbolicTurn,
-    lectura: value.lectura || fallbackCore || `${carta.nombre} no entrega una respuesta cerrada. Desde su eje simbólico —${symbolicAxis}— ayuda a mirar ${areaMeaning}. La escena puede ordenarse distinguiendo qué se mueve, qué se repite y qué gesto pequeño podría dar más claridad.`,
-    frase_tarologica: value.frase_tarologica || `${carta.nombre} abre una mirada, no una conclusión.`,
-    devolucion_agencia: value.devolucion_agencia || agency,
-    orientacion: value.orientacion || `Puedes observar ${areaMeaning} sin convertirlo en mandato ni respuesta definitiva.`,
+    etapa_vital: value.etapa_vital || input.contexto_vital?.etapa || "",
+    pregunta_ordenada: value.pregunta_ordenada || value.pregunta_reformulada
+      || `${alias}tu pregunta sobre ${area} puede ordenarse como una tensión${tensionSel ? ` entre ${tensionSel}` : ""}, buscando ${search}.`,
+    lo_que_la_pregunta_parece_pedir: value.lo_que_la_pregunta_parece_pedir
+      || `Parece pedir ${enJuego || `una forma más clara de mirar ${area}`}, buscando ${search}.`,
+    lo_que_la_pregunta_podria_ocultar: value.lo_que_la_pregunta_podria_ocultar
+      || `Quizás debajo conviven ${emotion || "una emoción no del todo nombrada"} y el temor a decidir sin estar seguro: el deseo de avanzar podría convivir con el miedo a perder algo.`,
+    tension_psicodinamica: value.tension_psicodinamica || value.tension_narrativa || value.tension_o_contradiccion
+      || (tensionSel
+        ? `La tensión central parece estar entre ${tensionSel}: dos fuerzas legítimas que hoy tiran en direcciones distintas.`
+        : tensionBase),
+    lectura_de_la_carta_en_esta_pregunta: value.lectura_de_la_carta_en_esta_pregunta || value.lectura || value.giro_simbolico || value.escena_consultante
+      || `Ante "${question}", ${carta.nombre} propone ${eje}. En ${area}, su imagen ayuda a mirar ${areaMeaning}: qué ya tiene forma, qué está agotado y qué gesto pequeño podría ordenar la duda.`,
+    resolucion_simbolica: value.resolucion_simbolica || value.devolucion_agencia || `${giro} ${agency}`,
+    orientacion_practica: value.orientacion_practica || value.orientacion
+      || `Puedes observar ${areaMeaning} sin convertirlo en mandato: nombra una sola cosa que hoy dependa de ti y déjala escrita.`,
     acto_simbolico_opcional: value.acto_simbolico_opcional || symbolicAct,
-    pregunta_integracion: value.pregunta_integracion || integrationQuestion
+    pregunta_final: value.pregunta_final || value.pregunta_integracion || integrationQuestion
   };
 }
 
 function crisisReading() {
   return {
     titulo: "Primero tu seguridad",
-    imagen_simbolica: "",
-    lectura: "Lo que escribiste suena a un momento de riesgo o dolor muy intenso. Esta pagina no va a convertirlo en lectura de cartas: lo importante es que no atravieses esto a solas.",
-    orientacion: "Si puedes estar en peligro ahora, llama a emergencias de tu pais o ve a un servicio de urgencia. Si estas en Chile, puedes llamar al *4141; si estas en Estados Unidos, llama o escribe al 988. Tambien puedes contactar ahora a una persona cercana y decirle: 'necesito compania, no estoy bien'.",
-    pregunta_integracion: "¿Puedes contactar ahora mismo a una persona o servicio de urgencia para no quedarte a solas con esto?",
+    carta: null,
+    pregunta_ordenada: "",
+    lo_que_la_pregunta_parece_pedir: "",
+    lo_que_la_pregunta_podria_ocultar: "",
+    tension_psicodinamica: "",
+    lectura_de_la_carta_en_esta_pregunta: "Lo que escribiste suena a un momento de riesgo o dolor muy intenso. Esta página no va a convertirlo en lectura de cartas: lo importante es que no atravieses esto a solas.",
+    etapa_vital: "",
+    resolucion_simbolica: "",
+    orientacion_practica: "Si puedes estar en peligro ahora, llama a emergencias de tu país o ve a un servicio de urgencia. Si estás en Chile, puedes llamar al *4141; si estás en Estados Unidos, llama o escribe al 988. También puedes contactar ahora a una persona cercana y decirle: 'necesito compañía, no estoy bien'.",
+    acto_simbolico_opcional: "",
+    pregunta_final: "¿Puedes contactar ahora mismo a una persona o servicio de urgencia para no quedarte a solas con esto?",
     disclaimer: CRISIS_DISCLAIMER,
+    fuentes_usadas: [],
     modo: "seguridad-crisis",
     provider: "safety",
     alerta: "crisis"
@@ -936,51 +1288,68 @@ function localSymbolicReading(input, carta = selectCard(), meaning = getCardMean
   const safetyProfile = buildSafetyProfile(input);
   const area = areaLabel(input.area).toLowerCase();
   const palabras = carta.palabras.join(", ");
+  const alias = input.alias ? `${input.alias}, ` : "";
+  const enJuego = input.en_juego ? EN_JUEGO_LABELS[input.en_juego] : "";
+  const emotion = input.emocion_dominante ? EMOCION_LABELS[input.emocion_dominante] : cleanOptional(input.estado_emocional);
+  const tensionSel = input.tension_principal ? TENSION_LABELS[input.tension_principal] : "";
+  const search = BUSQUEDA_LABELS[input.busqueda] || cleanOptional(input.busqueda) || "claridad";
   const fallbackFrame = meaning?.areas?.[input.area] || fallbackFrameForArea(input.area);
-  const aliasIntro = input.alias ? `${input.alias}, ` : "";
-  const emotion = cleanOptional(input.estado_emocional);
-  const search = cleanOptional(input.busqueda) || "claridad";
-  const visualScene = meaning?.escena_visual || `${carta.nombre} pone sobre la mesa la relación entre ${palabras}.`;
-  const symbolicAxis = meaning?.eje_simbolico || `mirar la situación desde ${palabras}`;
-  const narrativeTension = meaning?.tension_narrativa || "La tensión no parece estar sólo en encontrar una respuesta rápida, sino entre una parte que quiere claridad inmediata y otra que necesita no precipitarse.";
-  const symbolicTurn = meaning?.giro_simbolico || `${carta.nombre} introduce otra mirada: no responde por ti, pero pone sobre la mesa la relación entre ${palabras}.`;
+  const eje = meaning?.eje_simbolico || `mirar la situación desde ${palabras}`;
+  const giro = meaning?.giro_simbolico || `${carta.nombre} introduce otra mirada: no responde por ti, pero pone sobre la mesa la relación entre ${palabras}.`;
   const agency = meaning?.devolucion_agencia || "La carta no decide por ti. Te devuelve una posibilidad: separar lo vivo, lo agotado y lo pendiente.";
   const integrationQuestion = meaning?.pregunta_integracion || fallbackQuestionForArea(input.area);
   const symbolicAct = meaning?.acto_simbolico_seguro || "Si te sirve, escribe una frase de la pregunta y subraya sólo la palabra que hoy pide más cuidado. Luego déjala descansar.";
   const questionSummary = summarizeQuestionForPrompt(input.pregunta);
   const sensitiveThemes = detectSensitiveThemes(input.pregunta);
+  const hasDependenceConcern = hasConsultationDependenceConcern(input.pregunta);
+
   const careLine = sensitiveThemes.length
-    ? " Como aparecen señales de cuerpo, recaída o angustia, esta lectura no debe reemplazar apoyo profesional ni conversación humana concreta; puede acompañar la pregunta, no sostenerla sola."
+    ? " Como aparecen señales de cuerpo, recaída o angustia, esta lectura no reemplaza apoyo profesional ni una conversación humana concreta; puede acompañar la pregunta, no sostenerla sola."
     : "";
   const safetyLine = safetyProfile.alerta === "cuidado"
-    ? " Como aparece angustia intensa, conviene que esta lectura sea una pausa sobria y que puedas hablar con alguien de confianza o con apoyo profesional si la carga se vuelve dificil de sostener."
+    ? " Como aparece angustia intensa, conviene que esta lectura sea una pausa sobria y que puedas hablar con alguien de confianza o con apoyo profesional si la carga se vuelve difícil de sostener."
     : safetyProfile.alerta === "predictiva"
-      ? " Como la pregunta pide una certeza, esta lectura no va a predecir el futuro ni leer la voluntad de otra persona; solo puede ayudarte a mirar lo observable y lo que vuelve a tus manos."
+      ? " Como la pregunta pide una certeza, esta lectura no predice el futuro ni lee la voluntad de otra persona; sólo puede ayudarte a mirar lo observable y lo que vuelve a tus manos."
       : "";
   const lifeStageLine = input.contexto_vital?.etapa
     ? ` Como contexto amplio, esta pregunta ocurre en ${input.contexto_vital.etapa}; esa etapa puede servir para mirar qué pide madurar, cerrar o cuidar ahora, sin definir tu camino.`
     : "";
-  const pregunta = input.pregunta
-    ? `${aliasIntro}la pregunta sobre ${area} busca ${search} sin convertir la carta en una orden.`
-    : `${aliasIntro}esta consulta busca ${search} sin convertir la carta en una orden.`;
+
+  const tensionField = hasDependenceConcern
+    ? "La tensión está entre el deseo legítimo de claridad y el temor a ceder agencia a una respuesta externa. La pregunta no pide más oráculo: pide un modo de consultar que tenga límite, cierre y devolución a tus manos."
+    : tensionSel
+      ? `La tensión central parece estar entre ${tensionSel}: dos fuerzas legítimas que hoy tiran en direcciones distintas.`
+      : (meaning?.tension_narrativa || "La tensión no parece estar sólo en encontrar una respuesta rápida, sino entre una parte que quiere claridad inmediata y otra que necesita no precipitarse.");
+  const hiddenField = hasDependenceConcern
+    ? "Debajo puede convivir el deseo de claridad con el temor a depender de una respuesta externa; ese cuidado ya es un límite sano de uso."
+    : `Quizás debajo conviven ${emotion || "una emoción no del todo nombrada"} y el temor a decidir sin estar seguro: el deseo de avanzar podría convivir con el miedo a perder algo.`;
+  const orientationField = hasDependenceConcern
+    ? "Puedes usar esta lectura con un límite concreto: una sola consulta, una nota escrita y una acción pequeña fuera de la página antes de volver a preguntar."
+    : (safetyProfile.orientacion || fallbackOrientationForArea(input.area, palabras));
+  const actField = hasDependenceConcern
+    ? "Antes de cerrar, escribe dos columnas: qué claridad buscabas y qué poder no quieres entregarle a la lectura. Quédate con una frase de cada columna."
+    : symbolicAct;
+  const finalQuestion = hasDependenceConcern
+    ? "¿Qué límite de uso haría que esta consulta siga siendo una herramienta y no una autoridad?"
+    : integrationQuestion;
 
   return {
     titulo: `Lectura de apoyo con ${carta.nombre}`,
-    pregunta_reformulada: pregunta,
-    carta,
-    escena_consultante: `Con lo que traes —${questionSummary || `una pregunta sobre ${area}`}— aparece una escena suficientemente precisa para mirarla sin cerrarla de inmediato. ${visualScene}`,
-    validacion_emocional: emotion
-      ? `Es comprensible que aparezca ${emotion}: la pregunta no pide una sentencia, sino distinguir qué parte de ${fallbackFrame} ya tiene forma y qué parte todavía necesita ser nombrada.`
-      : `Es comprensible que esta pregunta pida cuidado: no busca una sentencia, sino distinguir qué parte de ${fallbackFrame} ya tiene forma y qué parte todavía necesita ser nombrada.`,
-    tension_narrativa: narrativeTension,
-    giro_simbolico: symbolicTurn,
-    lectura: `El símbolo no decide el camino. Ante esta escena, ${carta.nombre} propone ${symbolicAxis}. En el área de ${area}, esto puede ayudar a mirar ${fallbackFrame} como una composición: algo ya muestra forma, algo está agotado o inmaduro, y algo puede probarse con un gesto pequeño antes de exigir una conclusión total.${careLine}${safetyLine}${lifeStageLine} Una posibilidad de lectura es que la claridad no aparezca como respuesta definitiva, sino como separación: qué pertenece al miedo, qué pertenece al deseo, qué pertenece al cansancio y qué pertenece a una dirección posible que aún puede tomar forma.`,
-    frase_tarologica: `${carta.nombre} abre una mirada, no una conclusión.`,
-    devolucion_agencia: agency,
-    orientacion: safetyProfile.orientacion || fallbackOrientationForArea(input.area, palabras),
-    acto_simbolico_opcional: symbolicAct,
-    pregunta_integracion: integrationQuestion,
+    carta: buildCartaObject(null, meaning, carta),
+    pregunta_ordenada: input.pregunta
+      ? `${alias}tu pregunta sobre ${area} puede ordenarse${tensionSel ? ` como una tensión entre ${tensionSel}` : ""}, buscando ${search} sin convertir la carta en una orden.`
+      : `${alias}esta consulta busca ${search} sin convertir la carta en una orden.`,
+    lo_que_la_pregunta_parece_pedir: `Parece pedir ${enJuego || `una forma más clara de mirar ${area}`}, buscando ${search}.`,
+    lo_que_la_pregunta_podria_ocultar: hiddenField,
+    tension_psicodinamica: tensionField,
+    lectura_de_la_carta_en_esta_pregunta: `Ante ${questionSummary || `una pregunta sobre ${area}`}, ${carta.nombre} propone ${eje}. En el área de ${area}, su imagen ayuda a mirar ${fallbackFrame} como una composición: algo ya muestra forma, algo está agotado o inmaduro, y algo puede probarse con un gesto pequeño antes de exigir una conclusión total.${careLine}${safetyLine}${lifeStageLine} Una posibilidad de lectura es que la claridad no aparezca como respuesta definitiva, sino como separación: qué pertenece al miedo, qué al deseo, qué al cansancio y qué a una dirección posible que aún puede tomar forma.`,
+    etapa_vital: input.contexto_vital?.etapa || "",
+    resolucion_simbolica: `${giro} ${agency}`,
+    orientacion_practica: orientationField,
+    acto_simbolico_opcional: actField,
+    pregunta_final: finalQuestion,
     disclaimer: DISCLAIMER,
+    fuentes_usadas: normalizeSources(null, meaning),
     modo: "fallback-backend",
     provider: "fallback-backend",
     base_simbolica_usada: Boolean(meaning),
@@ -1333,3 +1702,7 @@ function cleanupRateLimit(now) {
     }
   }
 }
+
+// Worker Tarot de Marsella Libre — método Carta -> Pregunta -> Tensión -> Orden.
+// Proveedores (en orden): Claude Haiku (primario) -> Gemini 2.5-flash -> Cloudflare Workers AI -> fallback local.
+// Test offline del ruteo: node scripts/qa-provider-claude.mjs

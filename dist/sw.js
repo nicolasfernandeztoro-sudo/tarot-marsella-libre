@@ -1,4 +1,4 @@
-const CACHE_NAME = "tarot-marsella-libre-v13";
+const CACHE_NAME = "tarot-marsella-libre-v15";
 
 const STATIC_ASSETS = [
   "/",

@@ -693,6 +693,27 @@ input:focus-visible,
   color: #fff2d9 !important;
 }
 
+.reading-section--etapa {
+  border-left-color: rgba(184, 154, 94, 0.28);
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.reading-label {
+  color: var(--gold);
+  font-family: Arial, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sources-note {
+  margin-top: 14px;
+  color: rgba(226, 205, 166, 0.7) !important;
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+}
+
 .symbolic-act {
   color: #fff2d9 !important;
 }
@@ -741,6 +762,13 @@ input:focus-visible,
 .result-note {
   color: var(--quiet) !important;
   font-size: 0.86rem;
+}
+
+.use-boundary-note {
+  border-left: 1px solid rgba(184, 154, 94, 0.42);
+  padding-left: 12px;
+  color: var(--quiet) !important;
+  font-size: 0.9rem;
 }
 
 .contact-panel {

@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan Maestro · Tarot de Marsella Libre</title>
+<style>
+  :root{
+    --bg:#0f0b1a; --bg2:#171029; --panel:#1c1430; --panel2:#241a3d;
+    --gold:#d9b46a; --gold2:#f2dca0; --ink:#ece6d8; --muted:#a99fc0;
+    --line:#3a2f55; --azul:#6ea0e0; --rojo:#e0748a; --verde:#7fd6a2; --ambar:#e6c15a;
+    --mono:"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:Georgia,"Times New Roman",serif;
+    background:radial-gradient(circle at 50% -8%, #221740 0%, var(--bg) 55%);
+    color:var(--ink); line-height:1.6; margin:0;
+  }
+  .layout{display:flex; max-width:1180px; margin:0 auto; gap:24px; padding:0 18px}
+  nav.toc{
+    position:sticky; top:0; align-self:flex-start; width:230px; flex:none;
+    max-height:100vh; overflow:auto; padding:18px 8px 40px; font-family:Georgia,serif;
+    font-size:.82rem;
+  }
+  nav.toc h4{color:var(--gold);letter-spacing:1px;font-size:.7rem;text-transform:uppercase;margin:14px 0 6px}
+  nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:3px 8px;border-radius:6px;line-height:1.35}
+  nav.toc a:hover{color:var(--gold2);background:rgba(217,180,106,.08)}
+  main{flex:1;min-width:0;padding:26px 0 90px}
+  header.cover{
+    text-align:center;padding:46px 20px 34px;border:1px solid var(--line);border-radius:18px;
+    background:linear-gradient(160deg,#1d1436,#120d22);margin-bottom:26px;
+  }
+  header.cover .stars{color:var(--gold);letter-spacing:10px;opacity:.6;margin-bottom:14px}
+  header.cover h1{font-size:2rem;color:var(--gold2);font-weight:normal;letter-spacing:.5px;margin:0 0 6px}
+  header.cover .sub{color:var(--muted);font-style:italic}
+  header.cover .meta{color:var(--muted);font-size:.8rem;margin-top:16px}
+  section.block{
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:22px 24px;margin:0 0 20px;scroll-margin-top:14px;
+  }
+  section.block > h2{
+    color:var(--gold2);font-weight:normal;font-size:1.32rem;margin:0 0 4px;
+    display:flex;align-items:baseline;gap:10px;
+  }
+  section.block > h2 .n{
+    font-family:var(--mono);font-size:.8rem;color:var(--bg);background:var(--gold);
+    border-radius:6px;padding:2px 8px;font-weight:700;
+  }
+  h3{color:var(--gold);font-weight:normal;font-size:1.05rem;margin:20px 0 6px}
+  p{margin:8px 0}
+  .lead{color:var(--muted);font-style:italic;margin-top:2px}
+  ul,ol{margin:8px 0 8px 4px;padding-left:22px}
+  li{margin:4px 0}
+  strong{color:var(--gold2);font-weight:normal;font-family:Georgia,serif}
+  b{color:var(--gold2)}
+  code{font-family:var(--mono);font-size:.85em;background:#0c0818;color:var(--gold2);padding:1px 5px;border-radius:4px;border:1px solid var(--line)}
+  pre{
+    font-family:var(--mono);font-size:.78rem;line-height:1.45;background:#0b0716;color:#cdbdf0;
+    border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto;
+  }
+  pre.json{color:#bfe0c9}
+  .now{
+    border-left:3px solid var(--gold);background:rgba(217,180,106,.09);
+    padding:8px 14px;margin:12px 0;border-radius:0 8px 8px 0;
+  }
+  .now b{color:var(--gold2)}
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:.86rem}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:var(--gold);font-weight:normal;letter-spacing:.3px}
+  tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+  .chip{display:inline-block;font-family:var(--mono);font-size:.68rem;padding:2px 8px;border-radius:20px;letter-spacing:.4px;vertical-align:middle}
+  .r{background:rgba(224,116,138,.18);color:var(--rojo);border:1px solid rgba(224,116,138,.4)}
+  .a{background:rgba(230,193,90,.16);color:var(--ambar);border:1px solid rgba(230,193,90,.4)}
+  .g{background:rgba(127,214,162,.15);color:var(--verde);border:1px solid rgba(127,214,162,.4)}
+  .b{background:rgba(110,160,224,.15);color:var(--azul);border:1px solid rgba(110,160,224,.4)}
+  details{border:1px solid var(--line);border-radius:10px;margin:10px 0;background:var(--panel2);overflow:hidden}
+  details>summary{cursor:pointer;padding:10px 14px;color:var(--gold2);list-style:none;font-size:.95rem}
+  details>summary::-webkit-details-marker{display:none}
+  details>summary::before{content:"▸ ";color:var(--gold)}
+  details[open]>summary::before{content:"▾ "}
+  details .body{padding:2px 16px 14px}
+  .check{list-style:none;padding-left:0}
+  .check li{display:flex;gap:10px;align-items:flex-start;padding:6px 8px;border-radius:8px}
+  .check li:hover{background:rgba(255,255,255,.02)}
+  .check input{margin-top:5px;width:17px;height:17px;accent-color:var(--gold);flex:none}
+  .check label{cursor:pointer}
+  .fill textarea{
+    width:100%;min-height:70px;background:#0c0818;color:var(--ink);border:1px dashed var(--line);
+    border-radius:8px;padding:10px;font-family:Georgia,serif;font-size:.92rem;resize:vertical;margin-top:4px;
+  }
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .card h4{margin:0 0 6px;color:var(--gold);font-weight:normal;font-size:.98rem}
+  .flow{font-family:var(--mono);font-size:.8rem;color:var(--gold2);text-align:center;margin:14px 0;line-height:2}
+  .flow span{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:4px 10px;display:inline-block;margin:3px}
+  .arrow{color:var(--gold);margin:0 2px}
+  .progressbar{position:sticky;top:0;z-index:5;height:4px;background:var(--line)}
+  .progressbar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--gold2));transition:width .2s}
+  blockquote{border-left:3px solid var(--azul);margin:12px 0;padding:6px 16px;color:var(--muted);font-style:italic}
+  .kbd{font-family:var(--mono);font-size:.72rem;border:1px solid var(--line);border-radius:5px;padding:1px 6px;background:#0c0818}
+  @media(max-width:820px){.layout{flex-direction:column}nav.toc{position:static;width:auto;max-height:none;display:flex;flex-wrap:wrap;gap:2px}nav.toc h4{width:100%}.grid2{grid-template-columns:1fr}}
+  @media print{
+    body{background:#fff;color:#1a1524}nav.toc,.progressbar{display:none}
+    .layout{display:block;max-width:none}main{padding:0}
+    section.block{break-inside:avoid;border:1px solid #bbb;background:#fff;box-shadow:none}
+    header.cover{background:#fff;border:2px solid #444}
+    h1,h2,h3,strong,b,summary{color:#3a2a08 !important}
+    pre{background:#f4f1fb;color:#241a3d;border:1px solid #ccc}
+    code{background:#eee;color:#333}
+    details{border:1px solid #bbb;background:#fff}details[open] .body{display:block}
+    .now{background:#f7f0dd}.card,th{background:#f2eefc}
+    a{color:#333;text-decoration:none}
+  }
+</style>
+</head>
+<body>
+<div class="progressbar"><i id="pbar"></i></div>
+<div class="layout">
+<nav class="toc">
+  <h4>Empieza aquí</h4>
+  <a href="#resumen">★ Resumen ejecutivo</a>
+  <a href="#checklist">✓ Checklist de 10 acciones</a>
+  <h4>Diagnóstico</h4>
+  <a href="#d-html">1 · HTML roto</a>
+  <a href="#d-generico">2 · Por qué es genérico</a>
+  <h4>Sistema</h4>
+  <a href="#agentes">3 · Mapa de agentes</a>
+  <a href="#worker">4 · ¿El Worker es agente?</a>
+  <a href="#arquitectura">5 · Arquitectura por niveles</a>
+  <a href="#html-limites">6 · Qué vive en el HTML</a>
+  <h4>La lectura</h4>
+  <a href="#metodo">7 · Método de lectura</a>
+  <a href="#tension">8 · Tensión y alivio</a>
+  <a href="#vagas">9 · Preguntas vagas</a>
+  <a href="#formulario">10 · Formulario mínimo</a>
+  <h4>Motor</h4>
+  <a href="#prompt">11 · Prompt base</a>
+  <a href="#json">12 · JSON esperado</a>
+  <a href="#evaluador">13 · Evaluador de genericidad</a>
+  <a href="#recursos">14 · Uso de recursos</a>
+  <h4>Ejecución</h4>
+  <a href="#estetica">15 · Auditoría estética</a>
+  <a href="#fases">16 · Plan de fases</a>
+  <a href="#limites">17 · Alcances y límites</a>
+  <a href="#cuaderno">18 · Para tu cuaderno</a>
+  <a href="#glosario">19 · Glosario</a>
+  <a href="#suenos">20 · Anexo: sueños</a>
+</nav>
+<main>
+<header class="cover">
+  <div class="stars">✦ ✦ ✦</div>
+  <h1>Plan Maestro — Tarot de Marsella Libre</h1>
+  <div class="sub">Auditoría, arquitectura y método de lectura simbólica</div>
+  <div class="meta">Documento de trabajo · TDAH-friendly · 5 de julio de 2026 · Para pensar, dibujar y decidir qué hacer primero</div>
+</header>
+
+<section class="block">
+  <p class="lead" style="margin-top:0">Cómo usar este documento</p>
+  <p>No lo leas entero de corrido. Cada bloque es corto y termina con una caja <b>Ahora</b> que dice qué hacer con eso. Las casillas <span class="chip g">✓</span> y los campos de texto <b>se guardan solos en tu navegador</b> (puedes cerrar y volver). Para el PDF: <span class="kbd">Ctrl/Cmd + P</span> → "Guardar como PDF". Los bloques plegables <b>▸</b> guardan el detalle técnico para cuando lo necesites.</p>
+</section>
+
+<!-- ===================== RESUMEN ===================== -->
+<section class="block" id="resumen">
+  <h2><span class="n">★</span> Resumen ejecutivo</h2>
+  <p class="lead">Lo esencial en una pantalla.</p>
+  <p>Tu app <b>no está rota en lo importante</b>. El frontend es sólido, ético y bien pensado. Hay exactamente <b>dos problemas separados</b> que se confunden entre sí:</p>
+  <table>
+    <tr><th>#</th><th>Síntoma que ves</th><th>Causa real</th><th>Gravedad</th></tr>
+    <tr><td>A</td><td>El <code>index.html</code> "solo muestra el fondo"</td><td>Es un cascarón que carga JavaScript como <b>módulo ES</b>. Al abrirlo por <code>file://</code> (WhatsApp → Chrome), el navegador bloquea los módulos y el JS nunca corre. Solo alcanza a pintar el CSS = el fondo.</td><td><span class="chip a">Fácil de arreglar</span></td></tr>
+    <tr><td>B</td><td>Las respuestas se sienten genéricas</td><td>El texto lo genera <b>Gemini</b> en un Worker externo, con un prompt que <b>no está en tu repo</b> y sin una <b>base de significados por carta</b> (tu <code>deck.js</code> está vacío). El modelo improvisa sobre el vacío.</td><td><span class="chip r">Es el problema de fondo</span></td></tr>
+  </table>
+  <div class="now"><b>Ahora:</b> A y B no se resuelven igual. A es un tema de <i>cómo se abre el archivo</i> (usa el link, no el HTML modular). B es un tema de <i>prompt + base de cartas + evaluador</i>. El 80% de la mejora de calidad está en el <b>bloque 11 (prompt)</b> y el <b>bloque 13 (evaluador)</b>.</p></div>
+  <h3>Qué ya tienes hecho (y muy bien)</h3>
+  <ul>
+    <li>Formulario de baja fricción: pregunta libre + 5 preguntas de 3 opciones + fecha opcional.</li>
+    <li>Filtros éticos, detección de crisis / angustia / lenguaje predictivo, y fallback honesto que no disfraza fallas técnicas de lectura.</li>
+    <li>Reformulador de preguntas y botón "No sé cómo preguntar".</li>
+    <li>Privacidad real: sin login, cookies, analytics ni historial.</li>
+    <li>Un "comité" ético ya documentado y un QA automatizado (<code>scripts/qa-ethical.mjs</code>).</li>
+  </ul>
+  <h3>Qué falta (en orden de impacto)</h3>
+  <ol>
+    <li><b>Base de significados por carta</b> (22 arcanos) — hoy vacía. Sin esto, todo es genérico.</li>
+    <li><b>Prompt del Worker versionado y fuerte</b> — hoy invisible, vive solo dentro del Worker.</li>
+    <li><b>Evaluador de genericidad</b> que rechace y regenere respuestas vagas.</li>
+    <li><b>Segunda iteración</b> para preguntas vagas o irónicas.</li>
+  </ol>
+</section>
+
+<!-- ===================== CHECKLIST ===================== -->
+<section class="block" id="checklist">
+  <h2><span class="n">✓</span> Checklist inmediato — 10 acciones</h2>
+  <p class="lead">De menor a mayor esfuerzo. No hace falta hacerlas todas hoy.</p>
+  <ul class="check" data-persist>
+    <li><input type="checkbox" id="c1"><label for="c1"><b>Comparte el LINK</b>, no el archivo: <code>tarot-marsella-docfertoro.pages.dev</code>. Resuelve el "solo fondo" al instante.</label></li>
+    <li><input type="checkbox" id="c2"><label for="c2">Si quieres un archivo compartible, usa <code>original/tarot-original.html</code> (autocontenido, funciona por WhatsApp). El <code>index.html</code> modular <b>no</b>.</label></li>
+    <li><input type="checkbox" id="c3"><label for="c3"><b>Encuentra el código del Worker real</b> (<code>tarot-ia.nicolasfernandeztoro.workers.dev</code>). No está en esta carpeta. Búscalo en tu otra carpeta/repo de Wrangler.</label></li>
+    <li><input type="checkbox" id="c4"><label for="c4"><b>Copia el prompt actual del Worker</b> a <code>docs/prompt-backend.md</code> para poder verlo y versionarlo.</label></li>
+    <li><input type="checkbox" id="c5"><label for="c5"><b>Llena <code>deck.js</code></b> con 3–5 arcanos completos (imagen, número, palabras, tensión típica, giro). Empieza por los que más salen.</label></li>
+    <li><input type="checkbox" id="c6"><label for="c6">Reescribe el <b>system prompt</b> del Worker con la estructura del bloque 11 (rol, método, prohibiciones, JSON estricto).</label></li>
+    <li><input type="checkbox" id="c7"><label for="c7">Agrega al Worker un <b>evaluador de genericidad</b> (bloque 13): si la respuesta es vaga, regenera una vez.</label></li>
+    <li><input type="checkbox" id="c8"><label for="c8">Prueba <b>Claude Haiku</b> como motor principal contra Gemini con 5 preguntas fijas. Compara profundidad.</label></li>
+    <li><input type="checkbox" id="c9"><label for="c9">Monta un <b>n8n de laboratorio</b> (no público) para comparar prompts y guardar buenos ejemplos.</label></li>
+    <li><input type="checkbox" id="c10"><label for="c10">Decide el <b>encuadre</b>: pasa de "según Jodorowsky" a "inspirado en la tarología de Jodorowsky y el Tarot de Marsella" (bloque 15).</label></li>
+  </ul>
+</section>
+
+<!-- ===================== 1 HTML ROTO ===================== -->
+<section class="block" id="d-html">
+  <h2><span class="n">1</span> Diagnóstico: por qué "solo muestra el fondo"</h2>
+  <p class="lead">El caso está cerrado. Lo confirmé leyendo los dos archivos.</p>
+  <div class="grid2">
+    <div class="card">
+      <h4>❌ index.html (el roto)</h4>
+      <p>2 KB. Es un <b>cascarón</b>:</p>
+      <pre>&lt;div id="app"&gt;&lt;/div&gt;
+&lt;script type="module"
+  src="./src/main.js"&gt;&lt;/script&gt;</pre>
+      <p>Todo el contenido lo dibuja <code>main.js</code>. Y ese script es <b>type="module"</b>.</p>
+    </div>
+    <div class="card">
+      <h4>✅ original/tarot-original.html</h4>
+      <p>37 KB. Es <b>autocontenido</b>: CSS y JS <b>en línea</b>, un solo <code>&lt;script&gt;</code>, imágenes con ruta relativa <code>cartas/x.jpg</code>. Por eso funciona incluso abierto desde el disco.</p>
+    </div>
+  </div>
+  <h3>La causa exacta</h3>
+  <p>Cuando abres un archivo local en Chrome, la URL es <code>file://…</code>. Por seguridad, el navegador <b>prohíbe cargar módulos ES por file://</b> (política CORS de origen "null"). Resultado: <code>main.js</code> nunca se ejecuta, <code>#app</code> queda vacío, y lo único que se ve es el CSS del <code>&lt;body&gt;</code>: <b>el fondo</b>. Exactamente tu síntoma.</p>
+  <p>El original no usa módulos ni <code>fetch</code> de archivos externos, así que no lo afecta.</p>
+  <div class="now"><b>Ahora:</b> No es un bug que "arreglar" en el código — es una propiedad de <code>file://</code>. Tres salidas, de mejor a peor: <b>(1)</b> comparte el <b>link público</b> (ideal); <b>(2)</b> comparte <code>tarot-original.html</code> si insistes en mandar un archivo; <b>(3)</b> si quieres que el index modular funcione offline, habría que <b>empaquetarlo en un solo HTML con todo en línea</b> (un build "inline"). Ver bloque 6.</div>
+</section>
+
+<!-- ===================== 2 GENERICO ===================== -->
+<section class="block" id="d-generico">
+  <h2><span class="n">2</span> Diagnóstico: por qué las respuestas son genéricas</h2>
+  <p class="lead">Ranking de sospechosos, con la lógica de por qué.</p>
+  <table>
+    <tr><th>Sospechoso</th><th>¿Culpable?</th><th>Por qué</th></tr>
+    <tr><td><b>Base de cartas vacía</b> (<code>deck.js = []</code>)</td><td><span class="chip r">Muy probable</span></td><td>Sin significados curados por carta, el modelo no tiene material simbólico específico. Inventa desde cero → sale lo mismo de siempre. <b>Causa raíz #1.</b></td></tr>
+    <tr><td><b>El modelo: Gemini gratis/flash</b></td><td><span class="chip r">Muy probable</span></td><td>Tu <code>package.json</code> usa <code>GEMINI_API_KEY</code>. Los modelos gratuitos/pequeños tienden a respuestas seguras y genéricas, sobre todo en tarea simbólica-clínica. <b>Causa raíz #2.</b></td></tr>
+    <tr><td><b>Prompt pobre o invisible</b></td><td><span class="chip r">Probable</span></td><td>El prompt vive solo en el Worker (no en tu repo; <code>docs/prompt-backend.md</code> dice "Pendiente"). Si no lo ves, no lo mejoras. Un prompt sin método explícito = respuestas planas.</td></tr>
+    <tr><td><b>Sin evaluador de calidad</b></td><td><span class="chip a">Contribuye</span></td><td>Nada rechaza una respuesta vaga. La primera salida es la final. Sin "segundo intento" no hay presión hacia lo específico.</td></tr>
+    <tr><td><b>Sin segunda iteración para preguntas vagas</b></td><td><span class="chip a">Contribuye</span></td><td>Una pregunta pobre entra directo al modelo. Basura entra, niebla sale. Falta el paso "profundicemos" (bloque 9).</td></tr>
+    <tr><td><b>Filtros de seguridad demasiado estrictos</b></td><td><span class="chip a">Posible</span></td><td>Tu <code>sanitizeReadingText</code> reemplaza muchas frases. Bien para ética, pero si recorta de más, puede aplanar la voz. Revisar que no borre matices.</td></tr>
+    <tr><td>El formulario</td><td><span class="chip g">No es culpable</span></td><td>Ya recoge área, emoción, tensión, búsqueda, etapa vital. Da <b>contexto de sobra</b>. El problema no es la entrada.</td></tr>
+    <tr><td>El frontend / el JSON</td><td><span class="chip g">No es culpable</span></td><td>El contrato JSON es rico y el renderizado tiene campos para tensión, giro, resolución, etc. La estructura ya invita a profundidad; falta contenido que la llene.</td></tr>
+  </table>
+  <div class="now"><b>Ahora:</b> Ataca en este orden — <b>(1)</b> base de cartas, <b>(2)</b> prompt fuerte, <b>(3)</b> mejor modelo (Haiku), <b>(4)</b> evaluador. Los primeros dos son gratis y dan el mayor salto.</div>
+</section>
+
+<!-- ===================== 3 AGENTES ===================== -->
+<section class="block" id="agentes">
+  <h2><span class="n">3</span> Mapa de agentes y responsabilidades</h2>
+  <p class="lead">Quién hace qué hoy. Dibújalo en tu cuaderno tal cual.</p>
+  <pre>
+  ┌─────────────┐   pregunta+chips    ┌──────────────────┐
+  │  NAVEGADOR  │ ──────────────────► │  PAGES _worker.js│
+  │  (main.js)  │                     │  (proxy simple)  │
+  │             │ ◄────── JSON ────── │                  │
+  └─────────────┘                     └────────┬─────────┘
+     │  elige NADA de la carta                 │ reenvía a…
+     │  valida/filtra/renderiza                ▼
+     │  fallback si falla          ┌────────────────────────┐
+     │                             │  WORKER "tarot-ia"     │
+     └─ hoy la carta la elige ───► │  · elige carta         │
+        el Worker, no el front     │  · construye prompt    │
+                                   │  · llama a GEMINI 🔑    │
+                                   │  · devuelve JSON       │
+                                   └────────────────────────┘
+</pre>
+  <table>
+    <tr><th>Componente</th><th>Rol hoy</th><th>Rol ideal</th></tr>
+    <tr><td>Navegador / <code>main.js</code></td><td>UI, formulario, filtros éticos locales, fallback, render</td><td>Igual + mostrar iteración de profundización</td></tr>
+    <tr><td>Pages <code>_worker.js</code></td><td>Proxy tonto hacia el Worker real</td><td>Igual (está bien así)</td></tr>
+    <tr><td>Worker <code>tarot-ia</code></td><td>Elige carta, arma prompt, llama Gemini, devuelve JSON</td><td>+ base de cartas, + evaluador, + regeneración, + elección de modelo</td></tr>
+    <tr><td>Gemini</td><td>Genera todo el texto</td><td>Fallback / segunda opinión, no motor único</td></tr>
+    <tr><td>n8n</td><td>No existe aún</td><td>Laboratorio: comparar prompts y modelos, guardar buenos ejemplos</td></tr>
+  </table>
+  <div class="now"><b>Ahora:</b> El único lugar donde se decide la <b>calidad simbólica</b> es el Worker. Ahí va casi toda tu energía de mejora.</div>
+</section>
+
+<!-- ===================== 4 WORKER AGENTE ===================== -->
+<section class="block" id="worker">
+  <h2><span class="n">4</span> ¿Un Cloudflare Worker puede ser un "agente"?</h2>
+  <p class="lead">Sí, pero "agente" tiene niveles. Elige el que necesitas, no más.</p>
+  <table>
+    <tr><th>Nivel</th><th>Qué hace</th><th>¿Es "agente"?</th></tr>
+    <tr><td>Intermediario API</td><td>Recibe datos, llama al modelo, devuelve. Un tubo.</td><td><span class="chip g">No, y está bien</span></td></tr>
+    <tr><td>Constructor de prompt</td><td>Agrega carta + base simbólica + reglas antes de llamar.</td><td><span class="chip a">Casi</span></td></tr>
+    <tr><td>Orquestador</td><td>Elige modelo según caso, hace fallback Gemini↔Haiku.</td><td><span class="chip b">Sí, básico</span></td></tr>
+    <tr><td>Evaluador de calidad</td><td>Puntúa la respuesta; si es genérica, <b>regenera</b>.</td><td><span class="chip b">Sí, con criterio</span></td></tr>
+    <tr><td>Mini-agente sin memoria</td><td>Bucle interno: generar → evaluar → mejorar (2–3 vueltas), sin recordar entre sesiones.</td><td><span class="chip b">Sí</span></td></tr>
+    <tr><td>Conectado a n8n</td><td>Delega tareas pesadas o de laboratorio a un flujo externo.</td><td><span class="chip b">Sí, distribuido</span></td></tr>
+  </table>
+  <h3>Lo que un Worker puede y no puede</h3>
+  <div class="grid2">
+    <div class="card"><h4>Puede</h4><ul><li>Guardar claves como secretos (no visibles)</li><li>Recibir datos mínimos</li><li>Llamar a uno o varios modelos</li><li>Validar y reparar JSON</li><li>Hacer una <b>segunda llamada</b> si la respuesta es genérica</li></ul></div>
+    <div class="card"><h4>No puede (sin programarlo)</h4><ul><li>Ser autónomo "inteligente" solo</li><li>Tener memoria entre usuarios por sí mismo</li><li>Razonar en muchos pasos sin que tú escribas ese bucle</li><li>Exponer claves nunca</li></ul></div>
+  </div>
+  <div class="now"><b>Ahora:</b> Tu meta realista es <b>Worker = constructor de prompt + evaluador con 1 regeneración</b>. Eso ya es un "mini-agente" y sube muchísimo la calidad. No necesitas más por ahora.</div>
+</section>
+
+<!-- ===================== 5 ARQUITECTURA ===================== -->
+<section class="block" id="arquitectura">
+  <h2><span class="n">5</span> Arquitectura en 3 niveles</h2>
+  <p class="lead">Del más simple al laboratorio. Puedes quedarte en el Nivel 2 mucho tiempo.</p>
+
+  <h3>Nivel 1 — HTML local simple</h3>
+  <p>Objetivo: que funcione aunque llegue por WhatsApp. <b>Sin IA</b> o con IA solo si hay conexión.</p>
+  <div class="flow"><span>UI + carta local</span><span class="arrow">→</span><span>base mínima embebida</span><span class="arrow">→</span><span>lectura local</span><span class="arrow">→</span><span>(botón) profundizar con IA</span></div>
+  <details><summary>Limitaciones técnicas del Nivel 1</summary><div class="body">
+    <ul>
+      <li><b>Módulos ES + <code>file://</code></b> = no cargan. Todo debe ir en línea en un solo HTML.</li>
+      <li><b>CORS:</b> desde <code>file://</code> el origen es "null"; muchas APIs rechazan esa llamada.</li>
+      <li><b>fetch a tu Worker</b> desde un archivo local puede fallar por CORS; funciona bien desde la URL pública.</li>
+      <li>Por eso, en general: <b>compartir link &gt; compartir archivo</b>, aunque el espíritu sea mandar el HTML. Un link también es íntimo y gratis.</li>
+    </ul>
+  </div></details>
+
+  <h3>Nivel 2 — HTML + Worker (tu objetivo)</h3>
+  <div class="flow"><span>HTML</span><span class="arrow">→</span><span>Worker</span><span class="arrow">→</span><span>modelo</span><span class="arrow">→</span><span>evalúa</span><span class="arrow">→</span><span>(regenera)</span><span class="arrow">→</span><span>JSON</span><span class="arrow">→</span><span>HTML</span></div>
+  <p>El Worker: recibe input mínimo, agrega carta + base simbólica, arma el prompt, llama al modelo, valida JSON, <b>evalúa si es genérico</b>, regenera si hace falta, y devuelve la respuesta final. Claves siempre como secretos.</p>
+
+  <h3>Nivel 3 — HTML + Worker + n8n (laboratorio)</h3>
+  <p>n8n <b>no</b> como motor público, sino como <b>banco de pruebas</b>: comparar prompts, comparar modelos, comité evaluador, guardar ejemplos anónimos buenos, construir un dataset de "voz propia".</p>
+  <pre>
+  PRODUCCIÓN (rápida)          LABORATORIO (lento, tú)
+  HTML → Worker → modelo       n8n:
+         → evalúa → JSON         · prompt A vs prompt B
+                                 · Gemini vs Haiku
+                                 · comité de jueces
+                                 · guarda buenos ejemplos → dataset
+</pre>
+  <div class="now"><b>Ahora:</b> Vives en Nivel 2. Usa Nivel 3 solo para <b>experimentar</b>, nunca en el camino del usuario (agrega latencia y puntos de falla).</div>
+</section>
+
+<!-- ===================== 6 HTML LIMITES ===================== -->
+<section class="block" id="html-limites">
+  <h2><span class="n">6</span> Qué vive en el HTML y qué no</h2>
+  <div class="grid2">
+    <div class="card"><h4>✅ Sí puede vivir en el HTML</h4><ul>
+      <li>Interfaz, formulario, botones, animaciones</li>
+      <li>Selección local de carta (para el modo sin IA)</li>
+      <li>Base mínima de significados <b>si se embebe</b></li>
+      <li>Modo fallback local sin IA</li>
+      <li>La llamada al Worker / webhook de n8n</li>
+      <li>Filtros éticos de salida y el renderizado</li>
+    </ul></div>
+    <div class="card"><h4>❌ No debería vivir en el HTML</h4><ul>
+      <li><b>Claves API</b> (jamás — quedan visibles)</li>
+      <li>El prompt privado completo, si quieres protegerlo</li>
+      <li>Lógica sensible de elección de modelos</li>
+      <li>Almacenamiento de datos personales</li>
+      <li>Automatizaciones complejas</li>
+      <li>Llamadas directas a Claude/Gemini con clave visible</li>
+    </ul></div>
+  </div>
+  <div class="now"><b>Ahora:</b> Regla de oro — <b>lo que se ve, va en el HTML; lo que tiene clave o secreto, va en el Worker</b>. Tu proyecto ya respeta esto.</div>
+</section>
+
+<!-- ===================== 7 METODO ===================== -->
+<section class="block" id="metodo">
+  <h2><span class="n">7</span> Método de lectura recomendado</h2>
+  <p class="lead">La lógica que debe sentirse como un espejo, no como una predicción.</p>
+  <div class="flow"><span>Carta</span><span class="arrow">→</span><span>Pregunta</span><span class="arrow">→</span><span>Descomposición</span><span class="arrow">→</span><span>Tensión</span><span class="arrow">→</span><span>Reorden</span><span class="arrow">→</span><span>Alivio</span><span class="arrow">→</span><span>Nueva pregunta</span></div>
+  <p>La respuesta ideal tiene esta arquitectura de 10 partes (que <b>ya coincide</b> con los campos de tu JSON):</p>
+  <ol>
+    <li><b>Presentación de la carta</b> — nómbrala, dale protagonismo.</li>
+    <li><b>Descripción simbólica breve</b> — imagen, número, postura, un detalle visual concreto.</li>
+    <li><b>Relación con la pregunta</b> — por qué esta imagen para esta consulta.</li>
+    <li><b>Descomposición</b> — parte la pregunta en lo que pide y lo que oculta.</li>
+    <li><b>Tensión psicodinámica</b> — la contradicción viva (ver bloque 8).</li>
+    <li><b>Lectura arquetipal/junguiana</b> — la escena interior que la carta ilumina.</li>
+    <li><b>Reordenamiento</b> — replantear el problema desde otro eje.</li>
+    <li><b>Alivio o claridad</b> — algo se afloja, sin cerrar el tema.</li>
+    <li><b>Pregunta final</b> — invita a mirar más, no a volver a consultar.</li>
+    <li><b>Opción de nueva iteración</b> — sin fricción, sin capturar.</li>
+  </ol>
+  <details><summary>Ejemplo completo de lectura (El Colgado + una pregunta de amor)</summary><div class="body">
+    <blockquote>Pregunta: "¿Debería seguir esperando a que él decida?"</blockquote>
+    <p><b>Carta:</b> El Colgado (XII). Cuelga de un pie, cabeza abajo, manos atadas atrás, pero su rostro está sereno.<br>
+    <b>Relación:</b> Preguntas por la decisión del otro; la carta muestra a alguien <i>suspendido a propósito</i>.<br>
+    <b>Descomposición:</b> Parece pedir permiso para seguir esperando. Debajo late otra cosa: la espera se volvió tu posición, no solo tu circunstancia.<br>
+    <b>Tensión:</b> Preguntas por lo que hará él, pero la carta muestra una zona tuya que también eligió quedarse colgada.<br>
+    <b>Reorden:</b> Tal vez la pregunta no sea "qué decidirá él", sino "qué me da esta suspensión que aún no quiero soltar".<br>
+    <b>Alivio:</b> El Colgado no cae: sostiene la pausa con calma. Esperar puede ser una elección tuya, no solo una condena.<br>
+    <b>Pregunta final:</b> ¿Qué verías de tu propia decisión si dejaras de mirar la de él por un momento?</p>
+  </div></details>
+  <div class="now"><b>Ahora:</b> Tu JSON ya tiene los campos para esto. Lo que falta es que el <b>prompt exija</b> este recorrido en cada respuesta (bloque 11).</div>
+</section>
+
+<!-- ===================== 8 TENSION ===================== -->
+<section class="block" id="tension">
+  <h2><span class="n">8</span> Cómo generar tensión sin dañar</h2>
+  <p>Tensión <b>no</b> es asustar. Es <b>mostrar una contradicción</b> que la persona ya intuía y no había nombrado. Luego el alivio viene de <b>reordenar</b>, no de resolver.</p>
+  <div class="grid2">
+    <div class="card"><h4>Tensión (la contradicción)</h4><p><i>"Preguntas por el otro, pero la carta muestra una zona tuya que está esperando autorización."</i></p></div>
+    <div class="card"><h4>Alivio (el reorden)</h4><p><i>"Tal vez la pregunta no sea qué hará el otro, sino qué parte tuya necesita permiso para moverse."</i></p></div>
+  </div>
+  <h3>Reglas de la tensión segura</h3>
+  <ul>
+    <li>Señala una contradicción, nunca un defecto ("hay dos fuerzas legítimas en ti", no "te saboteas").</li>
+    <li>Devuelve siempre <b>agencia</b>: el reorden abre una acción posible, pequeña.</li>
+    <li>Sin diagnóstico, sin predicción, sin "deberías". Tu <code>sanitizeReadingText</code> ya vigila esto.</li>
+    <li>El alivio no cierra el tema: lo <b>vuelve más habitable</b>.</li>
+  </ul>
+</section>
+
+<!-- ===================== 9 VAGAS ===================== -->
+<section class="block" id="vagas">
+  <h2><span class="n">9</span> Flujo para preguntas vagas, irónicas o "poco serias"</h2>
+  <p class="lead">"¿Debería comer pan con queso?" no se responde literal ni con burla. Se trata como <b>asociación libre</b>.</p>
+  <blockquote>"Tu pregunta parece simple, incluso cotidiana. Pero a veces una pregunta pequeña permite mirar una escena mayor: elección, deseo, culpa, hambre, permiso, cuidado, placer o prohibición."</blockquote>
+  <p>Luego, máximo <b>5 iteraciones</b> breves, con botones o respuestas cortas. Cada una: sin fricción, estimula imaginación y afecto, usa la carta como imagen, invita a especificar sin humillar.</p>
+  <pre>
+  ITER 1  "Cuando preguntas eso, ¿qué pesa más?"        [deseo] [culpa] [indecisión]
+  ITER 2  "El pan con queso, ¿representa…"              [placer] [descuido] [consuelo]
+  ITER 3  "¿La duda es sobre comida o sobre…"           [permitirte algo]
+  ITER 4  "¿Qué temes que pase si eliges lo que quieres?"   (texto corto)
+  ITER 5  "¿Qué lectura quieres?"                       [literal] [simbólica] [emocional]
+                         │
+                         ▼   con eso ya hay escena → lectura del bloque 7
+</pre>
+  <div class="now"><b>Ahora:</b> Técnicamente, esto es un <b>estado de "profundización"</b> en <code>main.js</code> antes de llamar al Worker: si la pregunta es corta/vaga (ya lo detectas con <code>getQuestionHelpMessage</code>), muestra 1–2 chips extra en vez de mandar al modelo de una. Barato y muy efectivo.</div>
+</section>
+
+<!-- ===================== 10 FORMULARIO ===================== -->
+<section class="block" id="formulario">
+  <h2><span class="n">10</span> Formulario mínimo recomendado</h2>
+  <p class="lead">Buena noticia: el que ya tienes es casi el ideal. Solo lo afino.</p>
+  <p>Ya usas: pregunta libre + 5 preguntas de 3 opciones (área, en juego, emoción, tensión, búsqueda) + fecha opcional que se transforma en etapa vital <b>sin enviarse</b>. Es de baja fricción y da buen contexto.</p>
+  <table>
+    <tr><th>Campo</th><th>¿Pedirlo?</th><th>Por qué</th></tr>
+    <tr><td>Pregunta libre</td><td><span class="chip g">Sí, siempre</span></td><td>Es la escena. Núcleo de todo.</td></tr>
+    <tr><td>Área de vida</td><td><span class="chip g">Sí</span></td><td>Orienta el registro (amor/trabajo/identidad).</td></tr>
+    <tr><td>Tensión principal</td><td><span class="chip g">Sí</span></td><td>Es el motor del método. Muy valioso.</td></tr>
+    <tr><td>Emoción dominante</td><td><span class="chip g">Sí</span></td><td>Ajusta el tono y activa el cuidado.</td></tr>
+    <tr><td>Búsqueda (claridad/calma/movimiento)</td><td><span class="chip g">Sí</span></td><td>Define hacia dónde apunta el alivio.</td></tr>
+    <tr><td>Etapa vital (desde fecha, opcional)</td><td><span class="chip a">Opcional</span></td><td>Enriquece sin costo de privacidad. Mantener.</td></tr>
+    <tr><td>Fecha de nacimiento exacta</td><td><span class="chip r">No enviar</span></td><td>Solo transfórmala localmente en etapa. Ya lo haces bien.</td></tr>
+    <tr><td>Nivel de profundidad</td><td><span class="chip a">Evaluar</span></td><td>Un 4º valor útil: "breve / media / honda" cambia el largo de la lectura.</td></tr>
+  </table>
+  <div class="now"><b>Ahora:</b> No rehagas el formulario. Un solo cambio que suma: agregar <b>"profundidad" (breve/media/honda)</b> para modular el largo. Todo lo demás, déjalo.</div>
+</section>
+
+<!-- ===================== 11 PROMPT ===================== -->
+<section class="block" id="prompt">
+  <h2><span class="n">11</span> Prompt base para el Worker</h2>
+  <p class="lead">El entregable de mayor impacto. Va dentro del Worker, no en el HTML.</p>
+  <p>Estructura en 5 bloques. Lo escribo como plantilla en texto; tú lo adaptas y lo pones en <code>docs/prompt-backend.md</code> + el Worker.</p>
+  <pre>
+[ROL]
+Eres un lector simbólico del Tarot de Marsella con formación en
+psicología dinámica y pensamiento junguiano. No adivinas: ofreces
+un espejo. Hablas en español de Chile, sobrio, cálido, preciso.
+
+[MÉTODO OBLIGATORIO — sigue este orden SIEMPRE]
+1. Presenta la carta {carta.nombre} ({carta.numero}) con UN detalle
+   visual concreto de {carta.detalles}.
+2. Conéctala con la pregunta: "{pregunta}" (área {area}).
+3. Descompón: lo que la pregunta parece pedir vs lo que podría ocultar.
+4. Nombra UNA tensión psicodinámica (contradicción, no defecto).
+5. Reordena el problema desde otro eje.
+6. Ofrece un alivio que devuelva agencia (una acción pequeña, opcional).
+7. Cierra con UNA pregunta que invite a mirar más, no a volver a consultar.
+
+[MATERIAL DE LA CARTA]  ← aquí inyectas tu base de deck.js
+significado_base: {carta.significado_base}
+tensión_típica: {carta.tension}
+giro_posible: {carta.giro}
+palabras: {carta.palabras}
+
+[PROHIBICIONES]
+- No predecir el futuro ni hablar por otra persona.
+- No diagnosticar ni dar consejo médico/legal/financiero.
+- Nada de "deberías", "el destino", "energía", "vibración".
+- No cartas invertidas. Ninguna carta es "mala".
+- No te hagas pasar por Jodorowsky ni le atribuyas frases.
+- Devuelve SIEMPRE agencia al consultante.
+
+[CONTEXTO DEL CONSULTANTE]
+en_juego:{en_juego} · emoción:{emocion} · tensión:{tension} ·
+busca:{busqueda} · etapa:{contexto_vital} · profundidad:{profundidad}
+
+[FORMATO]
+Responde SOLO con el JSON del bloque 12. Sin texto fuera del JSON.
+Cada campo, específico a ESTA pregunta y ESTA carta. Prohibido
+lo genérico: si una frase serviría para cualquier consulta, reescríbela.
+</pre>
+  <div class="now"><b>Ahora:</b> La línea que más sube la calidad es la última: <i>"si una frase serviría para cualquier consulta, reescríbela"</i>. Y el <b>[MATERIAL DE LA CARTA]</b> — que hoy está vacío porque <code>deck.js</code> está vacío.</div>
+</section>
+
+<!-- ===================== 12 JSON ===================== -->
+<section class="block" id="json">
+  <h2><span class="n">12</span> JSON esperado de respuesta</h2>
+  <p class="lead">Reconstruido <b>exacto</b> desde tu <code>main.js</code> (así ya lo lee el frontend). No lo cambies: complétalo.</p>
+  <pre class="json">
+{
+  "titulo": "string breve, español, frase completa",
+  "modo": "ia-real",
+  "alerta": null,               // o "crisis" | "cuidado" | "predictiva"
+  "carta": {
+    "nombre": "El Colgado",
+    "numero": "XII",
+    "imagen": "./cartas/el-colgado.jpg",
+    "detalles_visuales_relevantes": ["cuelga de un pie", "rostro sereno"],
+    "palabras_clave": ["suspensión", "entrega", "otro punto de vista"],
+    "significado_base": "string curado desde deck.js",
+    "frase_simbolica": "string breve y evocador"
+  },
+  "pregunta_ordenada": "la pregunta reescrita con más precisión",
+  "lo_que_la_pregunta_parece_pedir": "…",
+  "lo_que_la_pregunta_podria_ocultar": "…",
+  "tension_psicodinamica": "la contradicción viva",
+  "lectura_de_la_carta_en_esta_pregunta": "el cuerpo de la lectura",
+  "etapa_vital": "opcional, desde contexto_vital",
+  "resolucion_simbolica": "el reorden que alivia",
+  "orientacion_practica": "un gesto pequeño, opcional, en 'puedes considerar'",
+  "acto_simbolico_opcional": "opcional",
+  "pregunta_final": "invita a mirar más",
+  "fuentes_usadas": ["observación de la imagen", "interpretación estructural"],
+  "disclaimer": "string ético"
+}
+</pre>
+  <div class="now"><b>Ahora:</b> Estos nombres de campo <b>tienen que coincidir exactamente</b> (tu normalizador los busca por nombre). Si el Worker devuelve otros nombres, el front cae a fallback y por eso a veces ves respuestas pobres "de conexión".</div>
+</section>
+
+<!-- ===================== 13 EVALUADOR ===================== -->
+<section class="block" id="evaluador">
+  <h2><span class="n">13</span> Evaluador de respuestas genéricas</h2>
+  <p class="lead">Un juez barato dentro del Worker. Si reprueba, regenera UNA vez.</p>
+  <h3>Rúbrica (0–2 cada criterio; aprueba con ≥ 8/12)</h3>
+  <table>
+    <tr><th>Criterio</th><th>0</th><th>2</th></tr>
+    <tr><td>Especificidad</td><td>Serviría para cualquier pregunta</td><td>Cita palabras de la pregunta concreta</td></tr>
+    <tr><td>Carta presente</td><td>La carta es decorativa</td><td>Un detalle visual sostiene la lectura</td></tr>
+    <tr><td>Tensión real</td><td>No hay contradicción</td><td>Nombra una tensión clara</td></tr>
+    <tr><td>Reorden</td><td>Repite la pregunta</td><td>Replantea desde otro eje</td></tr>
+    <tr><td>Agencia</td><td>Da órdenes o predice</td><td>Devuelve una acción pequeña y opcional</td></tr>
+    <tr><td>Voz</td><td>Plana / de manual</td><td>Sobria, cálida, humana</td></tr>
+  </table>
+  <details><summary>Pseudocódigo del bucle (no es código final)</summary><div class="body">
+<pre>
+respuesta = modelo(prompt)
+puntaje  = juez(respuesta, pregunta)   // otra llamada barata (Haiku)
+si puntaje &lt; 8:
+    prompt2 = prompt + "Tu intento anterior fue genérico en: "
+                     + criterios_bajos + ". Reescribe más específico."
+    respuesta = modelo(prompt2)        // 1 sola regeneración
+devolver validar_json(respuesta) o fallback
+</pre>
+    <p>El "juez" puede ser el <b>mismo modelo</b> con un prompt de evaluación, o Haiku (barato y rápido). Una sola regeneración evita costos y latencia altos.</p>
+  </div></details>
+  <div class="now"><b>Ahora:</b> Empieza con un juez <b>por reglas</b> (sin IA): ¿la respuesta repite palabras de la pregunta? ¿menciona el detalle de la carta? ¿largo mínimo? Si falla, regenera. Gratis, y ya filtra lo peor.</div>
+</section>
+
+<!-- ===================== 14 RECURSOS ===================== -->
+<section class="block" id="recursos">
+  <h2><span class="n">14</span> Uso recomendado de cada recurso</h2>
+  <table>
+    <tr><th>Recurso</th><th>Úsalo para</th><th>Prioridad</th></tr>
+    <tr><td><b>Claude Code / Codex</b></td><td>Encontrar el repo del Worker, copiar el prompt a docs, llenar <code>deck.js</code>, refactor del front, crear el evaluador, preparar deploy.</td><td><span class="chip g">Ahora</span></td></tr>
+    <tr><td><b>Claude Opus</b></td><td>Diseñar método, escribir el prompt maestro, redactar la base de cartas de alta calidad, crear rúbricas y ejemplos "de voz propia".</td><td><span class="chip g">Ahora</span></td></tr>
+    <tr><td><b>Claude Haiku</b> (~20 USD)</td><td>Motor barato de lecturas <b>y</b> juez del evaluador y generador de preguntas de profundización. Pruébalo como motor principal.</td><td><span class="chip g">Ahora</span></td></tr>
+    <tr><td><b>Gemini</b></td><td>Fallback y segunda opinión de estilo. Bajar a plan B, no motor único.</td><td><span class="chip a">Rebajar</span></td></tr>
+    <tr><td><b>n8n</b></td><td>Laboratorio: comparar prompts/modelos, comité de jueces, dataset de buenos ejemplos. No en producción.</td><td><span class="chip b">Fase 8</span></td></tr>
+    <tr><td><b>ChatGPT</b></td><td>Estrategia, sparring simbólico/clínico, revisión de arquitectura y prompts.</td><td><span class="chip a">Apoyo</span></td></tr>
+    <tr><td><b>OpenClaw / EasyOpen</b></td><td>Por ahora <b>distraen</b>. No aportan al problema central (prompt + base + evaluador). Guárdalos para después.</td><td><span class="chip r">Aparcar</span></td></tr>
+  </table>
+  <div class="now"><b>Ahora:</b> El presupuesto de 20 USD rinde más en <b>Haiku como motor + juez</b> que en cualquier otra cosa. Es tu mejor palanca de calidad por dólar.</div>
+</section>
+
+<!-- ===================== 15 ESTETICA ===================== -->
+<section class="block" id="estetica">
+  <h2><span class="n">15</span> Auditoría estética + encuadre</h2>
+  <p class="lead">Debe sentirse ritual, sobria, lenta, íntima. No comercial, no esotérica de más.</p>
+  <div class="grid2">
+    <div class="card"><h4>Conservar / reforzar</h4><ul>
+      <li>Paleta oscura, oro y serif (ya la tienes en el original)</li>
+      <li>Animación lenta de <b>revelado de carta</b></li>
+      <li>Marco tipo carta alrededor de la imagen</li>
+      <li>Secciones desplegables (menos ruido, más ritmo)</li>
+      <li>Móvil-friendly y modo oscuro por defecto</li>
+      <li>Microinteracciones suaves, nunca festivas</li>
+    </ul></div>
+    <div class="card"><h4>Evitar</h4><ul>
+      <li>Sobrecargar con símbolos ajenos (astrología, runas…)</li>
+      <li>Animaciones rápidas o "mágicas"</li>
+      <li>Copys de venta o urgencia</li>
+      <li>Iconografía esotérica genérica de stock</li>
+    </ul></div>
+  </div>
+  <h3>El encuadre "Jodorowsky" — decisión</h3>
+  <p>Hoy conviven dos versiones: el original dice <b>"según Jodorowsky"</b> (título) y la nueva dice <b>"inspirado en la tarología de Jodorowsky"</b>. Tu propio <code>AGENTS.md</code> prohíbe "según el método de Jodorowsky" como representación oficial.</p>
+  <table>
+    <tr><th>Opción</th><th>Riesgo</th></tr>
+    <tr><td>A. "Tarot de Marsella"</td><td><span class="chip g">Bajo</span> — pierde el gancho, pero es seguro</td></tr>
+    <tr><td>B. "Tarot simbólico"</td><td><span class="chip g">Bajo</span> — honesto, algo abstracto</td></tr>
+    <tr><td><b>C. "Lectura simbólica inspirada en el Tarot de Marsella, la tarología y la tradición arquetipal junguiana"</b></td><td><span class="chip g">El recomendado</span> — preciso, honra la influencia sin atribuir</td></tr>
+  </table>
+  <div class="now"><b>Ahora:</b> Elige <b>C</b>. Nunca frases atribuidas a Jodorowsky sin fuente. Tu filtro ya bloquea "estilo/como Alejandro Jodorowsky": bien. Actualiza también la <code>meta description</code> y el título del original para que coincidan.</div>
+</section>
+
+<!-- ===================== 16 FASES ===================== -->
+<section class="block" id="fases">
+  <h2><span class="n">16</span> Plan de fases</h2>
+  <p class="lead">Cada fase: objetivo · archivo · herramienta · dificultad · riesgo · resultado · criterio de término.</p>
+  <table>
+    <tr><th>Fase</th><th>Objetivo</th><th>Archivo / herramienta</th><th>Dif.</th><th>Criterio de término</th></tr>
+    <tr><td><b>0</b></td><td>Ordenar archivos: roto vs funcional</td><td>este doc · Claude Code</td><td><span class="chip g">Baja</span></td><td>Sabes qué compartir y por qué (✅ hecho aquí)</td></tr>
+    <tr><td><b>1</b></td><td>Encontrar y versionar el Worker + prompt actual</td><td>repo Wrangler · <code>prompt-backend.md</code></td><td><span class="chip a">Media</span></td><td>El prompt actual está copiado en docs</td></tr>
+    <tr><td><b>2</b></td><td>Fijar método Carta→Tensión→Orden</td><td>Opus · docs</td><td><span class="chip g">Baja</span></td><td>Método escrito (bloque 7)</td></tr>
+    <tr><td><b>3</b></td><td>Base mínima de significados por carta</td><td><code>src/data/deck.js</code> · Opus</td><td><span class="chip a">Media</span></td><td>≥ 5 arcanos completos</td></tr>
+    <tr><td><b>4</b></td><td>Afinar formulario (agregar profundidad)</td><td><code>main.js</code></td><td><span class="chip g">Baja</span></td><td>Campo "profundidad" funcionando</td></tr>
+    <tr><td><b>5</b></td><td>Reescribir prompt + fijar JSON</td><td>Worker · bloques 11–12</td><td><span class="chip a">Media</span></td><td>JSON válido y específico en 5 pruebas</td></tr>
+    <tr><td><b>6</b></td><td>Evaluador de genericidad + 1 regeneración</td><td>Worker · bloque 13</td><td><span class="chip r">Alta</span></td><td>Respuestas vagas se regeneran solas</td></tr>
+    <tr><td><b>7</b></td><td>Integrar Haiku (motor y/o juez)</td><td>Worker · secreto Haiku</td><td><span class="chip a">Media</span></td><td>Haiku responde y cuesta ≤ presupuesto</td></tr>
+    <tr><td><b>8</b></td><td>n8n como laboratorio</td><td>n8n</td><td><span class="chip a">Media</span></td><td>Comparas 2 prompts y guardas buenos ejemplos</td></tr>
+    <tr><td><b>9</b></td><td>Estética ritual (revelado, marco)</td><td>CSS · <code>main.css</code></td><td><span class="chip g">Baja</span></td><td>Revelado de carta suave en móvil</td></tr>
+    <tr><td><b>10</b></td><td>Testing con amigos + iterar</td><td>—</td><td><span class="chip g">Baja</span></td><td>3–5 personas dan feedback</td></tr>
+  </table>
+  <div class="now"><b>Ahora:</b> El salto de calidad real ocurre entre <b>Fase 3 y Fase 6</b>. Fases 0–2 son de orden; hazlas rápido.</div>
+</section>
+
+<!-- ===================== 17 LIMITES ===================== -->
+<section class="block" id="limites">
+  <h2><span class="n">17</span> Alcances y límites</h2>
+  <div class="grid2">
+    <div class="card"><h4>✅ Viable ahora</h4><ul>
+      <li>Mejorar y versionar el prompt</li>
+      <li>Arreglar el "solo fondo" (link / archivo inline)</li>
+      <li>Base mínima de cartas</li>
+      <li>Afinar formulario</li>
+      <li>Worker como orquestador simple + evaluador</li>
+      <li>Haiku para mejores respuestas</li>
+      <li>n8n para pruebas</li>
+      <li>Mantener privacidad y gratuidad</li>
+    </ul></div>
+    <div class="card"><h4>⚠ Difícil ahora</h4><ul>
+      <li>Agentes múltiples en producción</li>
+      <li>Memoria compleja entre sesiones</li>
+      <li>IA real desde un archivo local sin fricción (CORS)</li>
+      <li>Claves seguras dentro del HTML (imposible)</li>
+      <li>App offline con IA real</li>
+      <li>Profundidad garantizada con modelos muy pequeños</li>
+      <li>Lectura 100% fiel a Jodorowsky sin base curada</li>
+    </ul></div>
+  </div>
+  <div class="now"><b>Ahora:</b> Nada de lo "difícil" te bloquea. Todo lo que necesitas para una gran experiencia está en la columna verde.</div>
+</section>
+
+<!-- ===================== 18 CUADERNO ===================== -->
+<section class="block" id="cuaderno">
+  <h2><span class="n">18</span> Para tu cuaderno — espacios rellenables</h2>
+  <p class="lead">Se guardan solos en tu navegador. Úsalos como bitácora de decisión.</p>
+  <div class="fill">
+    <p><b>Qué entiendo ahora (con mis palabras):</b></p>
+    <textarea data-persist id="f1" placeholder="El 'solo fondo' es por… La genericidad viene de…"></textarea>
+    <p><b>Qué puedo hacer HOY (1–2 cosas):</b></p>
+    <textarea data-persist id="f2" placeholder="Compartir el link. Copiar el prompt del Worker a docs."></textarea>
+    <p><b>Qué dejo para DESPUÉS:</b></p>
+    <textarea data-persist id="f3" placeholder="Evaluador con IA, n8n, estética…"></textarea>
+    <p><b>Qué AUTOMATIZO (y con qué):</b></p>
+    <textarea data-persist id="f4" placeholder="Comparar prompts en n8n. Juez con Haiku."></textarea>
+    <p><b>Qué NO toco todavía:</b></p>
+    <textarea data-persist id="f5" placeholder="El frontend funciona; OpenClaw/EasyOpen; RAG."></textarea>
+  </div>
+  <h3>Ejercicio para dibujar</h3>
+  <p>En una hoja, dibuja las <b>3 cajas</b> del bloque 3 (Navegador → Pages → Worker→Gemini) y marca con un color <b>dónde se decide la calidad</b> (spoiler: el Worker). Luego dibuja la flecha nueva que agregarías: <b>Worker → evaluador → regenera</b>.</p>
+</section>
+
+<!-- ===================== 19 GLOSARIO ===================== -->
+<section class="block" id="glosario">
+  <h2><span class="n">19</span> Glosario simple</h2>
+  <table>
+    <tr><th>Término</th><th>En una frase</th></tr>
+    <tr><td><b>Worker</b></td><td>Un mini-programa en el servidor de Cloudflare que corre tu lógica sin exponer claves.</td></tr>
+    <tr><td><b>Módulo ES</b></td><td>Un JavaScript moderno que el navegador <b>no</b> carga desde archivos locales (<code>file://</code>).</td></tr>
+    <tr><td><b>CORS</b></td><td>Regla de seguridad del navegador sobre quién puede llamar a quién. Bloquea llamadas desde archivos locales.</td></tr>
+    <tr><td><b>Fallback</b></td><td>Plan B cuando algo falla (aquí: una lectura local honesta si el Worker no responde).</td></tr>
+    <tr><td><b>Prompt</b></td><td>Las instrucciones que le das al modelo de IA. La calidad del prompt = la calidad de la respuesta.</td></tr>
+    <tr><td><b>Deck / base de cartas</b></td><td>El diccionario de significados por arcano. Hoy vacío = respuestas genéricas.</td></tr>
+    <tr><td><b>Evaluador / juez</b></td><td>Un paso que puntúa la respuesta y pide otra si es floja.</td></tr>
+    <tr><td><b>n8n</b></td><td>Herramienta visual para encadenar pasos automáticos. Aquí: laboratorio de pruebas.</td></tr>
+    <tr><td><b>Arquetipo (junguiano)</b></td><td>Imagen o figura interior universal (el sabio, la sombra…) que la carta ayuda a mirar.</td></tr>
+  </table>
+</section>
+
+<!-- ===================== 20 SUEÑOS ===================== -->
+<section class="block" id="suenos">
+  <h2><span class="n">20</span> Anexo: sueños futuros</h2>
+  <p class="lead">Separado a propósito de lo accionable. No es para ahora.</p>
+  <ul>
+    <li><b>RAG</b> con una base curada (fichas de cada carta) para que la IA cite material real.</li>
+    <li><b>Base vectorial</b> de ejemplos de "voz propia" que guíen el estilo.</li>
+    <li><b>Comité real en n8n</b>: varios jueces (clínico, simbólico, UX) votando cada respuesta.</li>
+    <li><b>Multi-modelo</b>: Haiku + Gemini + otro, eligiendo el mejor por caso.</li>
+    <li><b>Fine-tuning</b> con tu dataset de buenas lecturas.</li>
+    <li><b>PWA / modo offline</b> real con base local.</li>
+    <li><b>Métricas anónimas opt-in</b> (solo si algún día quieres, y siempre con consentimiento).</li>
+    <li><b>Memoria local</b> de la sesión (sin servidor) para hilar iteraciones.</li>
+  </ul>
+  <div class="now"><b>Ahora:</b> Anótalos y ciérralos. El proyecto no los necesita para ser bueno. Vuelve a esta lista solo cuando las Fases 0–7 estén sólidas.</div>
+</section>
+
+<p style="text-align:center;color:var(--muted);font-style:italic;margin:30px 0 10px">"Una carta no decide por ti: abre una conversación."</p>
+
+</main>
+</div>
+<script>
+  // Barra de progreso de lectura
+  var pbar=document.getElementById('pbar');
+  addEventListener('scroll',function(){
+    var h=document.documentElement,b=document.body;
+    var st=h.scrollTop||b.scrollTop, sh=(h.scrollHeight||b.scrollHeight)-h.clientHeight;
+    pbar.style.width=(sh>0?(st/sh*100):0)+'%';
+  });
+  // Persistencia local de casillas y textos (archivo local en Chrome)
+  function key(id){return 'tarot-maestro-'+id;}
+  document.querySelectorAll('[data-persist] input[type=checkbox], input[type=checkbox][data-persist]').forEach(function(el){
+    try{ if(localStorage.getItem(key(el.id))==='1') el.checked=true; }catch(e){}
+    el.addEventListener('change',function(){try{localStorage.setItem(key(el.id), el.checked?'1':'0');}catch(e){}});
+  });
+  document.querySelectorAll('textarea[data-persist]').forEach(function(el){
+    try{ var v=localStorage.getItem(key(el.id)); if(v!==null) el.value=v; }catch(e){}
+    el.addEventListener('input',function(){try{localStorage.setItem(key(el.id), el.value);}catch(e){}});
+  });
+</script>
+</body>
+</html>
