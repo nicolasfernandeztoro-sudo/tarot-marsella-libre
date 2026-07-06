@@ -21,20 +21,20 @@ npx.cmd wrangler deploy
 Pages (PRODUCCIÓN — el dominio público):
 
 ```powershell
-npx.cmd wrangler pages deploy dist --project-name=tarot-marsella-docfertoro --branch=production
+npx.cmd wrangler pages deploy dist --project-name=tarot-marsella-libre --branch=production
 ```
 
 > ⚠️ IMPORTANTE: el `--branch=production` NO es opcional. La rama de producción de
 > este proyecto se llama `production`. Sin ese flag, wrangler usa el nombre de tu
 > rama de git (`master`) y publica una **vista previa (Preview)** que NO actualiza
-> el dominio público `tarot-marsella-docfertoro.pages.dev`. Para verificar cuál es
-> la rama de producción: `npx.cmd wrangler pages deployment list --project-name=tarot-marsella-docfertoro`
+> el dominio público `tarot-marsella-libre.pages.dev`. Para verificar cuál es
+> la rama de producción: `npx.cmd wrangler pages deployment list --project-name=tarot-marsella-libre`
 > (mira la columna Environment = Production y su Branch).
 
 Verificar que producción se actualizó (debe mostrar el `?v=` nuevo):
 
 ```powershell
-# En el navegador, hard refresh en https://tarot-marsella-docfertoro.pages.dev/
+# En el navegador, hard refresh en https://tarot-marsella-libre.pages.dev/
 # o revisar el código fuente (Ctrl+U) y buscar main.js?v=...
 ```
 

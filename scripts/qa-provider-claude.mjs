@@ -117,7 +117,7 @@ function safeParse(value) {
 async function callWorker(inputBody) {
   const request = new Request("https://tarot-ia.test/api/tarot", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Origin": "https://tarot-marsella-docfertoro.pages.dev" },
+    headers: { "Content-Type": "application/json", "Origin": "https://tarot-marsella-libre.pages.dev" },
     body: JSON.stringify(inputBody)
   });
   const env = { CLAUDE_API_KEY: "test-key", CLAUDE_MODEL: "claude-haiku-4-5-20251001" };

@@ -146,4 +146,4 @@ Validacion:
 - `node --check scripts/qa-ethical.mjs`
 - `npm.cmd run qa:ethical`
 - Worker desplegado: `https://tarot-ia.nicolasfernandeztoro.workers.dev`
-- Pages desplegado: `https://master.tarot-marsella-docfertoro.pages.dev`
+- Pages desplegado: `https://master.tarot-marsella-libre.pages.dev`

@@ -759,7 +759,7 @@ async function copyPageLink() {
 }
 
 function getPublicPageUrl() {
-  return "https://tarot-marsella-docfertoro.pages.dev/";
+  return "https://tarot-marsella-libre.pages.dev/";
 }
 
 function buildReadingCopy(result) {

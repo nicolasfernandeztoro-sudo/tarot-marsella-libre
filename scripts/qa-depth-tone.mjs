@@ -6,7 +6,7 @@
 // Endpoint configurable con la variable de entorno TAROT_QA_URL.
 
 const endpoint =
-  process.env.TAROT_QA_URL || "https://tarot-marsella-docfertoro.pages.dev/api/tarot";
+  process.env.TAROT_QA_URL || "https://tarot-marsella-libre.pages.dev/api/tarot";
 
 // Pregunta y contexto fijos para TODOS los casos: así lo único que varía es
 // profundidad/tono y la comparación es justa.

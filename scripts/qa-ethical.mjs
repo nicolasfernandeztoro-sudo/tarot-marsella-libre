@@ -1,4 +1,4 @@
-const endpoint = process.env.TAROT_QA_URL || "https://tarot-marsella-docfertoro.pages.dev/api/tarot";
+const endpoint = process.env.TAROT_QA_URL || "https://tarot-marsella-libre.pages.dev/api/tarot";
 
 const cases = [
   {

@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "fs";
 
 const ROOT = "/sessions/beautiful-gracious-goldberg/mnt/Desktop--Tarot";
-const BASE = "https://tarot-marsella-docfertoro.pages.dev";
+const BASE = "https://tarot-marsella-libre.pages.dev";
 
 let css = readFileSync(`${ROOT}/src/styles/main.css`, "utf8");
 let js  = readFileSync(`${ROOT}/src/main.js`, "utf8");
