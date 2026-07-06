@@ -1,6 +1,10 @@
 import { readFileSync, writeFileSync } from "fs";
+import { dirname, resolve } from "path";
+import { fileURLToPath } from "url";
 
-const ROOT = "/sessions/beautiful-gracious-goldberg/mnt/Desktop--Tarot";
+// Raíz del repo = carpeta padre de /scripts. Se calcula sola, funciona en
+// cualquier equipo (Windows incluido) sin rutas absolutas quemadas.
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const BASE = "https://tarot-marsella-libre.pages.dev";
 
 let css = readFileSync(`${ROOT}/src/styles/main.css`, "utf8");

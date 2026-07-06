@@ -10,7 +10,7 @@
   ARCHIVO COMPARTIBLE (build de un solo archivo).
   Generado desde src/main.js + src/styles/main.css.
   · Script clásico (sin módulos ES) para que funcione al abrirlo desde file://.
-  · Worker e imágenes apuntan a https://tarot-marsella-docfertoro.pages.dev (funcionan con conexión).
+  · Worker e imágenes apuntan a https://tarot-marsella-libre.pages.dev (funcionan con conexión).
   · Sin conexión: cae a la lectura local, nunca a "solo el fondo".
   NO editar a mano: regenerar con scripts/bundle.mjs.
 -->
@@ -933,8 +933,8 @@ input:focus-visible,
 <body>
 <div id="app"></div>
 <script>
-const WORKER_URL = "https://tarot-marsella-docfertoro.pages.dev/api/tarot";
-const WORKER_HEALTH_URL = "https://tarot-marsella-docfertoro.pages.dev/api/health";
+const WORKER_URL = "https://tarot-marsella-libre.pages.dev/api/tarot";
+const WORKER_HEALTH_URL = "https://tarot-marsella-libre.pages.dev/api/health";
 
 // Formulario mínimo: pregunta libre + fecha opcional + 5 preguntas con botones (máx 3 alternativas).
 const AREAS = [
@@ -973,27 +973,27 @@ const EMOCION_HINTS = {
 const SYMBOLIC_CARDS = [
   {
     title: "La Papisa",
-    image: "https://tarot-marsella-docfertoro.pages.dev/cartas/la-papisa.jpg",
+    image: "https://tarot-marsella-libre.pages.dev/cartas/la-papisa.jpg",
     phrase: "El saber que madura en silencio."
   },
   {
     title: "La Estrella",
-    image: "https://tarot-marsella-docfertoro.pages.dev/cartas/la-estrella.jpg",
+    image: "https://tarot-marsella-libre.pages.dev/cartas/la-estrella.jpg",
     phrase: "Una imagen de calma para volver a mirar."
   },
   {
     title: "La Justicia",
-    image: "https://tarot-marsella-docfertoro.pages.dev/cartas/la-justicia.jpg",
+    image: "https://tarot-marsella-libre.pages.dev/cartas/la-justicia.jpg",
     phrase: "La pregunta busca medida y claridad."
   },
   {
     title: "El Ermitaño",
-    image: "https://tarot-marsella-docfertoro.pages.dev/cartas/el-ermitano.jpg",
+    image: "https://tarot-marsella-libre.pages.dev/cartas/el-ermitano.jpg",
     phrase: "Una luz pequeña alcanza para ordenar el camino inmediato."
   },
   {
     title: "La Templanza",
-    image: "https://tarot-marsella-docfertoro.pages.dev/cartas/la-templanza.jpg",
+    image: "https://tarot-marsella-libre.pages.dev/cartas/la-templanza.jpg",
     phrase: "Algo pide mezcla, pausa y proporción."
   }
 ];
@@ -1696,7 +1696,7 @@ async function copyPageLink() {
 }
 
 function getPublicPageUrl() {
-  return "https://tarot-marsella-docfertoro.pages.dev/";
+  return "https://tarot-marsella-libre.pages.dev/";
 }
 
 function buildReadingCopy(result) {
@@ -1951,7 +1951,7 @@ function generateFallbackReading(input) {
       id: "la-templanza",
       nombre: "La Templanza",
       numero: "XIIII",
-      imagen: "https://tarot-marsella-docfertoro.pages.dev/cartas/la-templanza.jpg",
+      imagen: "https://tarot-marsella-libre.pages.dev/cartas/la-templanza.jpg",
       palabras: ["pausa", "cuidado", "apoyo"]
     });
     return {
@@ -2356,7 +2356,7 @@ function normalizeCard(value, fallback = {}) {
     nombre: String(source.nombre || source.name || fallback.nombre || fallback.name || "Carta simbólica").trim(),
     numero: String(source.numero || source.number || fallback.numero || fallback.number || "").trim(),
     tipo: String(source.tipo || source.type || fallback.tipo || fallback.type || "mayor").trim(),
-    imagen: String(source.imagen || source.image || fallback.imagen || fallback.image || "").trim().replace(/^\.\/cartas\//, "https://tarot-marsella-docfertoro.pages.dev/cartas/"),
+    imagen: String(source.imagen || source.image || fallback.imagen || fallback.image || "").trim().replace(/^\.\/cartas\//, "https://tarot-marsella-libre.pages.dev/cartas/"),
     palabras: Array.isArray(source.palabras || source.words)
       ? (source.palabras || source.words).map((word) => String(word).trim()).filter(Boolean)
       : Array.isArray(fallback.palabras || fallback.words)
